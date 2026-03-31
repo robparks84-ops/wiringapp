@@ -1,6 +1,6 @@
 'use client';
 
-import { Handle, Position, NodeProps } from '@xyflow/react';
+import { Handle, Position, NodeProps, NodeResizer } from '@xyflow/react';
 import { Box, Text } from '@mantine/core';
 
 export interface SpliceNodeData {
@@ -16,8 +16,10 @@ export function SpliceNode({ data, selected }: NodeProps) {
         border: `2px solid ${selected ? '#f08c00' : '#f59f00'}`,
         borderRadius: '50%',
         background: '#fff9db',
-        width: 56,
-        height: 56,
+        width: '100%',
+        height: '100%',
+        minWidth: 40,
+        minHeight: 40,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -26,6 +28,13 @@ export function SpliceNode({ data, selected }: NodeProps) {
         position: 'relative',
       }}
     >
+      <NodeResizer
+        minWidth={40}
+        minHeight={40}
+        isVisible={selected}
+        color="#f59f00"
+        keepAspectRatio
+      />
       <Handle type="target" position={Position.Left} id="in" style={{ background: '#f59f00' }} />
       <Handle type="source" position={Position.Right} id="out1" style={{ top: '33%', background: '#f59f00' }} />
       <Handle type="source" position={Position.Right} id="out2" style={{ top: '66%', background: '#f59f00' }} />

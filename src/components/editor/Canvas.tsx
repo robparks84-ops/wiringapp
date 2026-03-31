@@ -15,6 +15,8 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useCallback, useEffect } from 'react';
+import { Button, Group, Tooltip } from '@mantine/core';
+import { IconRoute, IconRouteOff } from '@tabler/icons-react';
 
 import { CavityNode } from './nodes/CavityNode';
 import { GroundBlockNode } from './nodes/GroundBlockNode';
@@ -28,7 +30,7 @@ import {
   DT_4, DTM_4, DTP_4, BULKHEAD_8,
   MS3PRO_EVO_WHITE, MS3PRO_EVO_GRAY,
   AIM_PDM32_BLACK, AIM_PDM32_GRAY,
-  SENSOR_DEFAULTS, groundBlockCavities, CATEGORY_COLORS,
+  SENSOR_DEFAULTS, DEVICE_DEFAULTS, groundBlockCavities, CATEGORY_COLORS,
   type Cavity,
 } from '@/lib/nodeDefaults';
 
@@ -93,7 +95,7 @@ export function Canvas({ initialNodes = [], initialEdges = [], onSave, wireSearc
     (connection) =>
       setEdges((eds) =>
         addEdge(
-          { ...connection, type: 'wire', data: { color: '#212529', stripeColor: '', gauge: '20 AWG', label: '' } },
+          { ...connection, type: 'wire', data: { color: '#ffffff', stripeColor: '', gauge: '20 AWG', label: '' } },
           eds
         )
       ),
@@ -154,6 +156,10 @@ export function Canvas({ initialNodes = [], initialEdges = [], onSave, wireSearc
           if (sensorCavities) {
             return { ...base, label: subtype, category: 'sensor', cavities: freshCavities(sensorCavities), headerColor: CATEGORY_COLORS['Sensor'] ?? color };
           }
+          const deviceCavities = DEVICE_DEFAULTS[subtype];
+          if (deviceCavities) {
+            return { ...base, label: subtype, category: 'blank', cavities: freshCavities(deviceCavities), headerColor: CATEGORY_COLORS['Device'] ?? color };
+          }
           return { ...base, label: subtype, category: 'blank', cavities: [] };
         }
       }
@@ -191,6 +197,50 @@ export function Canvas({ initialNodes = [], initialEdges = [], onSave, wireSearc
     );
   }
 
+  // Auto-route: compute a 2-waypoint orthogonal L-shape for an edge using node positions
+  function computeAutoWaypoints(edge: Edge): { x: number; y: number }[] | null {
+    const srcNode = nodes.find((n) => n.id === edge.source);
+    const tgtNode = nodes.find((n) => n.id === edge.target);
+    if (!srcNode || !tgtNode) return null;
+    // Approximate node centers
+    const srcX = srcNode.position.x + 90;
+    const srcY = srcNode.position.y + 60;
+    const tgtX = tgtNode.position.x + 90;
+    const tgtY = tgtNode.position.y + 60;
+    const midX = (srcX + tgtX) / 2;
+    // Return two waypoints creating a horizontal-vert-horizontal orthogonal path
+    return [
+      { x: midX, y: srcY },
+      { x: midX, y: tgtY },
+    ];
+  }
+
+  function handleAutoRouteSelected() {
+    if (!selected?.edge) return;
+    const wps = computeAutoWaypoints(selected.edge);
+    setEdges((eds) => eds.map((e) =>
+      e.id === selected.edge!.id ? { ...e, data: { ...e.data, waypoints: wps ?? [] } } : e
+    ));
+  }
+
+  function handleAutoRouteAll() {
+    setEdges((eds) => eds.map((e) => {
+      const wps = computeAutoWaypoints(e);
+      return { ...e, data: { ...e.data, waypoints: wps ?? [] } };
+    }));
+  }
+
+  function handleStraightenSelected() {
+    if (!selected?.edge) return;
+    setEdges((eds) => eds.map((e) =>
+      e.id === selected.edge!.id ? { ...e, data: { ...e.data, waypoints: [] } } : e
+    ));
+  }
+
+  function handleStraightenAll() {
+    setEdges((eds) => eds.map((e) => ({ ...e, data: { ...e.data, waypoints: [] } })));
+  }
+
   function handleDelete() {
     if (selected?.node) {
       setNodes((nds) => nds.filter((n) => n.id !== selected.node!.id));
@@ -219,6 +269,68 @@ export function Canvas({ initialNodes = [], initialEdges = [], onSave, wireSearc
       <Toolbar onAdd={handleAdd} />
 
       <div style={{ flex: 1, position: 'relative' }}>
+        {/* Auto-route floating toolbar */}
+        <Group
+          gap={4}
+          style={{
+            position: 'absolute',
+            top: 8,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 10,
+            background: 'rgba(255,255,255,0.92)',
+            border: '1px solid var(--mantine-color-gray-3)',
+            borderRadius: 6,
+            padding: '4px 8px',
+            pointerEvents: 'all',
+          }}
+        >
+          <Tooltip label="Auto-route selected wire" withArrow position="bottom">
+            <Button
+              size="xs"
+              variant="subtle"
+              leftSection={<IconRoute size={13} />}
+              disabled={!selected?.edge}
+              onClick={handleAutoRouteSelected}
+            >
+              Route Wire
+            </Button>
+          </Tooltip>
+          <Tooltip label="Auto-route all wires" withArrow position="bottom">
+            <Button
+              size="xs"
+              variant="subtle"
+              leftSection={<IconRoute size={13} />}
+              onClick={handleAutoRouteAll}
+            >
+              Route All
+            </Button>
+          </Tooltip>
+          <Tooltip label="Straighten selected wire (clear waypoints)" withArrow position="bottom">
+            <Button
+              size="xs"
+              variant="subtle"
+              color="gray"
+              leftSection={<IconRouteOff size={13} />}
+              disabled={!selected?.edge}
+              onClick={handleStraightenSelected}
+            >
+              Straighten
+            </Button>
+          </Tooltip>
+          <Tooltip label="Straighten all wires" withArrow position="bottom">
+            <Button
+              size="xs"
+              variant="subtle"
+              color="gray"
+              leftSection={<IconRouteOff size={13} />}
+              onClick={handleStraightenAll}
+            >
+              Straighten All
+            </Button>
+          </Tooltip>
+        </Group>
+
         <ReactFlow
           nodes={nodes}
           edges={displayEdges}

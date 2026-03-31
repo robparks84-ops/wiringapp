@@ -49,7 +49,7 @@ export function PropertiesPanel({
   const edge = selected?.edge;
 
   const nodeForm = useForm({ initialValues: { label: '' } });
-  const edgeForm = useForm({ initialValues: { color: '#212529', stripeColor: '', gauge: '20 AWG', label: '' } });
+  const edgeForm = useForm({ initialValues: { color: '#ffffff', stripeColor: '', gauge: '20 AWG', label: '' } });
 
   // Node header color (for all cavity/groundBlock nodes)
   const [nodeColor, setNodeColor] = useState<string>('#495057');
@@ -92,7 +92,7 @@ export function PropertiesPanel({
     if (edge) {
       const d = edge.data as Record<string, unknown> | undefined;
       edgeForm.setValues({
-        color: (d?.color as string) ?? '#212529',
+        color: (d?.color as string) ?? '#ffffff',
         stripeColor: (d?.stripeColor as string) ?? '',
         gauge: (d?.gauge as string) ?? '20 AWG',
         label: (d?.label as string) ?? '',
