@@ -49,7 +49,7 @@ export function PropertiesPanel({
   const edge = selected?.edge;
 
   const nodeForm = useForm({ initialValues: { label: '' } });
-  const edgeForm = useForm({ initialValues: { color: '#ffffff', stripeColor: '', gauge: '20 AWG', label: '' } });
+  const edgeForm = useForm({ initialValues: { color: '#ffffff', stripeColor: '', gauge: '20 AWG', label: '', hideGauge: false } });
 
   // Node header color (for all cavity/groundBlock nodes)
   const [nodeColor, setNodeColor] = useState<string>('#495057');
@@ -96,6 +96,7 @@ export function PropertiesPanel({
         stripeColor: (d?.stripeColor as string) ?? '',
         gauge: (d?.gauge as string) ?? '20 AWG',
         label: (d?.label as string) ?? '',
+        hideGauge: (d?.hideGauge as boolean) ?? false,
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -339,6 +340,12 @@ export function PropertiesPanel({
               <Stack gap="xs">
                 <TextInput label="Circuit name" size="xs" placeholder="e.g. IGN_SW" {...edgeForm.getInputProps('label')} />
                 <Select label="Wire gauge" size="xs" data={GAUGES} {...edgeForm.getInputProps('gauge')} />
+                <Switch
+                  label="Hide gauge tag on wire"
+                  size="xs"
+                  checked={edgeForm.values.hideGauge}
+                  onChange={(e) => edgeForm.setFieldValue('hideGauge', e.currentTarget.checked)}
+                />
                 <ColorInput
                   label="Wire color (base)"
                   size="xs"

@@ -56,34 +56,66 @@ export function CavityNode({ data, selected }: NodeProps) {
         {cavities.length === 0 && (
           <Text fz={10} c="dimmed" px={4} py={2}>No cavities</Text>
         )}
-        {cavities.map((cav, i) => (
-          <Box
-            key={cav.id}
-            style={{
-              position: 'relative',
-              height: 22,
-              display: 'flex',
-              alignItems: 'center',
-              borderBottom: i < cavities.length - 1 ? '1px solid #f1f3f5' : undefined,
-            }}
-          >
-            <Handle
-              type="target"
-              position={Position.Left}
-              id={`${cav.id}-target`}
-              style={{ left: -10, top: '50%', transform: 'translateY(-50%)', background: color, width: 8, height: 8 }}
-            />
-            <Text fz={11} px={6} style={{ userSelect: 'none', whiteSpace: 'nowrap' }}>
-              {cav.label}
-            </Text>
-            <Handle
-              type="source"
-              position={Position.Right}
-              id={`${cav.id}-source`}
-              style={{ right: -10, top: '50%', transform: 'translateY(-50%)', background: color, width: 8, height: 8 }}
-            />
-          </Box>
-        ))}
+        {cavities.map((cav, i) => {
+          // Section divider row — no handles
+          if (cav.isSection) {
+            return (
+              <Box
+                key={cav.id}
+                style={{
+                  background: color,
+                  margin: i === 0 ? '0 -4px 2px' : '4px -4px 2px',
+                  padding: '1px 10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <Text fz={9} fw={700} c="white" tt="uppercase" style={{ letterSpacing: 1 }}>
+                  {cav.label}
+                </Text>
+              </Box>
+            );
+          }
+
+          // Normal connectable pin row
+          const isLast = (() => {
+            // last non-section cavity
+            for (let j = cavities.length - 1; j > i; j--) {
+              if (!cavities[j].isSection) return false;
+            }
+            return true;
+          })();
+          const nextIsSectionOrLast = i === cavities.length - 1 || cavities[i + 1]?.isSection;
+
+          return (
+            <Box
+              key={cav.id}
+              style={{
+                position: 'relative',
+                height: 22,
+                display: 'flex',
+                alignItems: 'center',
+                borderBottom: !nextIsSectionOrLast ? '1px solid #f1f3f5' : undefined,
+              }}
+            >
+              <Handle
+                type="target"
+                position={Position.Left}
+                id={`${cav.id}-target`}
+                style={{ left: -10, top: '50%', transform: 'translateY(-50%)', background: color, width: 8, height: 8 }}
+              />
+              <Text fz={11} px={6} style={{ userSelect: 'none', whiteSpace: 'nowrap' }}>
+                {cav.label}
+              </Text>
+              <Handle
+                type="source"
+                position={Position.Right}
+                id={`${cav.id}-source`}
+                style={{ right: -10, top: '50%', transform: 'translateY(-50%)', background: color, width: 8, height: 8 }}
+              />
+            </Box>
+          );
+        })}
       </Box>
     </Box>
   );

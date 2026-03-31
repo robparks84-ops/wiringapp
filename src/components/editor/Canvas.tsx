@@ -16,7 +16,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useCallback, useEffect } from 'react';
 import { Button, Group, Tooltip } from '@mantine/core';
-import { IconRoute, IconRouteOff } from '@tabler/icons-react';
+import { IconRoute, IconRouteOff, IconTag, IconTagOff } from '@tabler/icons-react';
 
 import { CavityNode } from './nodes/CavityNode';
 import { GroundBlockNode } from './nodes/GroundBlockNode';
@@ -68,6 +68,7 @@ export function Canvas({ initialNodes = [], initialEdges = [], onSave, wireSearc
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selected, setSelected] = useState<SelectedItem | null>(null);
+  const [gaugeHidden, setGaugeHidden] = useState(false);
 
   // Sync when parent loads doc data
   useEffect(() => {
@@ -241,6 +242,12 @@ export function Canvas({ initialNodes = [], initialEdges = [], onSave, wireSearc
     setEdges((eds) => eds.map((e) => ({ ...e, data: { ...e.data, waypoints: [] } })));
   }
 
+  function handleToggleAllGauge() {
+    const next = !gaugeHidden;
+    setGaugeHidden(next);
+    setEdges((eds) => eds.map((e) => ({ ...e, data: { ...e.data, hideGauge: next } })));
+  }
+
   function handleDelete() {
     if (selected?.node) {
       setNodes((nds) => nds.filter((n) => n.id !== selected.node!.id));
@@ -327,6 +334,17 @@ export function Canvas({ initialNodes = [], initialEdges = [], onSave, wireSearc
               onClick={handleStraightenAll}
             >
               Straighten All
+            </Button>
+          </Tooltip>
+          <Tooltip label={gaugeHidden ? 'Show gauge tags on all wires' : 'Hide gauge tags on all wires'} withArrow position="bottom">
+            <Button
+              size="xs"
+              variant={gaugeHidden ? 'light' : 'subtle'}
+              color={gaugeHidden ? 'orange' : 'gray'}
+              leftSection={gaugeHidden ? <IconTagOff size={13} /> : <IconTag size={13} />}
+              onClick={handleToggleAllGauge}
+            >
+              {gaugeHidden ? 'Show Gauge' : 'Hide Gauge'}
             </Button>
           </Tooltip>
         </Group>

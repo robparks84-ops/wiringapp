@@ -3,6 +3,7 @@
 export interface Cavity {
   id: string;
   label: string;
+  isSection?: boolean; // renders as a divider header, not a connectable pin
 }
 
 export interface CavityNodeData {
@@ -124,7 +125,8 @@ export const SENSOR_DEFAULTS: Record<string, Cavity[]> = {
   IAT:              [c('Signal'), c('Sensor GND')],
   'Oil Pressure':   [c('Signal'), c('+5V Ref'), c('Sensor GND')],
   'Fuel Pressure':  [c('Signal'), c('+5V Ref'), c('Sensor GND')],
-  'Lambda / WBO2':  [c('Signal +'), c('Signal -'), c('Heater +'), c('Heater -')],
+  'Lambda / WBO2':  [c('Signal +'), c('Signal -'), c('Heater +'), c('Heater -')], // backward compat
+  'O2 Sensor':      [c('+12V'), c('GND'), c('Analog Out 1'), c('Analog Out 2')],
   'Cam Position':   [c('Signal'), c('+12V'), c('GND')],
   'Crank Position': [c('VR +'), c('VR -')],
   'Oil Temp':       [c('Signal'), c('Sensor GND')],
@@ -146,6 +148,10 @@ export const DEVICE_DEFAULTS: Record<string, Cavity[]> = {
   'Coil Pack 2':      [c('Signal'), c('+12V'), c('GND')],
   'Coil Pack 3':      [c('Signal'), c('+12V'), c('GND')],
   'Coil Pack 4':      [c('Signal'), c('+12V'), c('GND')],
+  'Coil Pack 5':      [c('Signal'), c('+12V'), c('GND')],
+  'Coil Pack 6':      [c('Signal'), c('+12V'), c('GND')],
+  'Coil Pack 7':      [c('Signal'), c('+12V'), c('GND')],
+  'Coil Pack 8':      [c('Signal'), c('+12V'), c('GND')],
   'Fuel Pump':        [c('+12V'), c('GND'), c('Signal')],
   'Defroster':        [c('+12V'), c('GND')],
   'Vanos Solenoid':   [c('Pin 1'), c('Pin 2')],
@@ -169,8 +175,18 @@ export const DEVICE_DEFAULTS: Record<string, Cavity[]> = {
   'Injector 6':       [c('+12V'), c('Signal')],
   'Injector 7':       [c('+12V'), c('Signal')],
   'Injector 8':       [c('+12V'), c('Signal')],
-  'Quad Spark 1':     [c('Coil A Signal'), c('Coil B Signal'), c('+12V'), c('GND')],
-  'Quad Spark 2':     [c('Coil C Signal'), c('Coil D Signal'), c('+12V'), c('GND')],
+  'Quad Spark 1':     [
+    { id: 'qs1-in',  label: 'IN',    isSection: true },
+    c('A In'), c('B In'), c('C In'), c('D In'),
+    { id: 'qs1-out', label: 'OUT',   isSection: true },
+    c('A Out'), c('B Out'), c('C Out'), c('D Out'),
+  ],
+  'Quad Spark 2':     [
+    { id: 'qs2-in',  label: 'IN',    isSection: true },
+    c('A In'), c('B In'), c('C In'), c('D In'),
+    { id: 'qs2-out', label: 'OUT',   isSection: true },
+    c('A Out'), c('B Out'), c('C Out'), c('D Out'),
+  ],
 };
 
 // ─── Ground Block ───────────────────────────────────────────────────────────

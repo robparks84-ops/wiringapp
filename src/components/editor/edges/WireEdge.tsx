@@ -10,6 +10,7 @@ export interface WireEdgeData {
   stripeColor: string;
   gauge: string;
   label: string;
+  hideGauge?: boolean;
   waypoints?: { x: number; y: number }[];
   [key: string]: unknown;
 }
@@ -170,7 +171,7 @@ export function WireEdge({
   const d = data as WireEdgeData | undefined;
   const wireColor = d?.color || '#ffffff';
   const stripeColor = d?.stripeColor || '';
-  const gauge = d?.gauge || '';
+  const gauge = d?.hideGauge ? '' : (d?.gauge || '');
   const label = d?.label || '';
   const waypoints: Point[] = (d?.waypoints as Point[]) ?? [];
 
