@@ -118,9 +118,9 @@ export function Canvas({ initialNodes = [], initialEdges = [], onSave, wireSearc
     if (type === 'splice') return { label: 'SP', subtype: 'Splice' };
 
     if (type === 'groundBlock') {
-      const posts: 4 | 8 = subtype === 'GroundBlock8' ? 8 : 4;
+      const posts = 4;
       return {
-        label: `${posts}-Post GND`,
+        label: '4-Post GND',
         posts,
         cavities: freshCavities(groundBlockCavities(posts)),
         headerColor: CATEGORY_COLORS['GroundBlock'] ?? '#212529',
@@ -130,20 +130,20 @@ export function Canvas({ initialNodes = [], initialEdges = [], onSave, wireSearc
     // cavity type — all connectors, ECU, PDM, sensors, blank
     if (type === 'cavity') {
       const base = { subtype, headerColor: color };
+      const connBase = { ...base, category: 'connector', connectorColor: 'black', gender: 'female', sealed: true, notes: '' };
 
       switch (subtype) {
-        case 'DT':        return { ...base, label: 'DT Connector',   category: 'connector', cavities: freshCavities(DT_4) };
-        case 'DTM':       return { ...base, label: 'DTM Connector',  category: 'connector', cavities: freshCavities(DTM_4) };
-        case 'DTP':       return { ...base, label: 'DTP Connector',  category: 'connector', cavities: freshCavities(DTP_4) };
-        case 'AT':        return { ...base, label: 'AT Connector',   category: 'connector', cavities: freshCavities(DT_4) };
-        case 'ATM':       return { ...base, label: 'ATM Connector',  category: 'connector', cavities: freshCavities(DTM_4) };
-        case 'Bulkhead':  return { ...base, label: 'Bulkhead',       category: 'connector', cavities: freshCavities(BULKHEAD_8) };
+        case 'DT':        return { ...connBase, label: 'DT Connector',   cavities: freshCavities(DT_4) };
+        case 'DTM':       return { ...connBase, label: 'DTM Connector',  cavities: freshCavities(DTM_4) };
+        case 'DTP':       return { ...connBase, label: 'DTP Connector',  cavities: freshCavities(DTP_4) };
+        case 'AT':        return { ...connBase, label: 'AT Connector',   cavities: freshCavities(DT_4) };
+        case 'ATM':       return { ...connBase, label: 'ATM Connector',  cavities: freshCavities(DTM_4) };
+        case 'Bulkhead':  return { ...connBase, label: 'Bulkhead', connectorColor: 'gray', cavities: freshCavities(BULKHEAD_8) };
         case 'ECU-C1':    return { ...base, label: 'MS3Pro Evo C1',  category: 'ecu',       cavities: freshCavities(MS3PRO_EVO_C1) };
         case 'ECU-C2':    return { ...base, label: 'MS3Pro Evo C2',  category: 'ecu',       cavities: freshCavities(MS3PRO_EVO_C2) };
         case 'AIM PDM32': return { ...base, label: 'AIM PDM32',      category: 'pdm',       cavities: freshCavities(AIM_PDM32) };
         case 'Blank':     return { ...base, label: 'Custom Device',  category: 'blank',     cavities: [{ id: Math.random().toString(36).slice(2), label: 'Pin 1' }, { id: Math.random().toString(36).slice(2), label: 'Pin 2' }] };
         default: {
-          // Sensors
           const sensorCavities = SENSOR_DEFAULTS[subtype];
           if (sensorCavities) {
             return { ...base, label: subtype, category: 'sensor', cavities: freshCavities(sensorCavities), headerColor: CATEGORY_COLORS['Sensor'] ?? color };

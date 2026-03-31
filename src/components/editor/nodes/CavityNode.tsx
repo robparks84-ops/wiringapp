@@ -25,6 +25,30 @@ export function CavityNode({ data, selected }: NodeProps) {
           {d.subtype}
         </Text>
         <Text fz={12} fw={600} c="white" lineClamp={1}>{d.label}</Text>
+        {d.category === 'connector' && (() => {
+          const gender = d.gender as string | undefined;
+          const connColor = d.connectorColor as string | undefined;
+          const isSealed = d.sealed as boolean | undefined;
+          return (
+            <Box style={{ display: 'flex', gap: 4, marginTop: 2 }}>
+              {gender && (
+                <Text fz={9} c="white" style={{ opacity: 0.8, background: 'rgba(255,255,255,0.15)', borderRadius: 3, padding: '0 4px' }}>
+                  {gender === 'female' ? 'F' : 'M'}
+                </Text>
+              )}
+              {isSealed !== undefined && (
+                <Text fz={9} c="white" style={{ opacity: 0.8, background: 'rgba(255,255,255,0.15)', borderRadius: 3, padding: '0 4px' }}>
+                  {isSealed ? 'Sealed' : 'Open'}
+                </Text>
+              )}
+              {connColor && (
+                <Text fz={9} c="white" style={{ opacity: 0.8, background: 'rgba(255,255,255,0.15)', borderRadius: 3, padding: '0 4px' }}>
+                  {connColor.charAt(0).toUpperCase() + connColor.slice(1)}
+                </Text>
+              )}
+            </Box>
+          );
+        })()}
       </Box>
 
       {/* Cavities */}

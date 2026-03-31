@@ -20,14 +20,26 @@ function c(label: string): Cavity {
 
 // ─── Deutsch Connectors ────────────────────────────────────────────────────
 
-export const DT_4: Cavity[] = [c('Cav 1'), c('Cav 2'), c('Cav 3'), c('Cav 4')];
-export const DT_6: Cavity[] = Array.from({ length: 6 }, (_, i) => c(`Cav ${i + 1}`));
-export const DT_8: Cavity[] = Array.from({ length: 8 }, (_, i) => c(`Cav ${i + 1}`));
+export const DT_2: Cavity[]  = Array.from({ length: 2  }, (_, i) => c(`Cav ${i + 1}`));
+export const DT_3: Cavity[]  = Array.from({ length: 3  }, (_, i) => c(`Cav ${i + 1}`));
+export const DT_4: Cavity[]  = Array.from({ length: 4  }, (_, i) => c(`Cav ${i + 1}`));
+export const DT_6: Cavity[]  = Array.from({ length: 6  }, (_, i) => c(`Cav ${i + 1}`));
+export const DT_8: Cavity[]  = Array.from({ length: 8  }, (_, i) => c(`Cav ${i + 1}`));
 export const DT_12: Cavity[] = Array.from({ length: 12 }, (_, i) => c(`Cav ${i + 1}`));
-export const DTM_4: Cavity[] = Array.from({ length: 4 }, (_, i) => c(`Cav ${i + 1}`));
-export const DTM_6: Cavity[] = Array.from({ length: 6 }, (_, i) => c(`Cav ${i + 1}`));
-export const DTP_4: Cavity[] = Array.from({ length: 4 }, (_, i) => c(`Cav ${i + 1}`));
-export const BULKHEAD_8: Cavity[] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map((l) => c(l));
+export const DTM_2: Cavity[] = Array.from({ length: 2  }, (_, i) => c(`Cav ${i + 1}`));
+export const DTM_3: Cavity[] = Array.from({ length: 3  }, (_, i) => c(`Cav ${i + 1}`));
+export const DTM_4: Cavity[] = Array.from({ length: 4  }, (_, i) => c(`Cav ${i + 1}`));
+export const DTM_6: Cavity[] = Array.from({ length: 6  }, (_, i) => c(`Cav ${i + 1}`));
+export const DTP_2: Cavity[] = Array.from({ length: 2  }, (_, i) => c(`Cav ${i + 1}`));
+export const DTP_4: Cavity[] = Array.from({ length: 4  }, (_, i) => c(`Cav ${i + 1}`));
+export const BULKHEAD_8: Cavity[]  = ['A','B','C','D','E','F','G','H'].map((l) => c(l));
+export const BULKHEAD_12: Cavity[] = ['A','B','C','D','E','F','G','H','J','K','L','M'].map((l) => c(l));
+export const BULKHEAD_16: Cavity[] = Array.from({ length: 16 }, (_, i) => c(String.fromCharCode(65 + i)));
+
+/** Generic cavity array of n pins */
+export function connectorCavities(pinCount: number): Cavity[] {
+  return Array.from({ length: pinCount }, (_, i) => c(`Cav ${i + 1}`));
+}
 
 // ─── MS3Pro Evo ─────────────────────────────────────────────────────────────
 
@@ -93,7 +105,7 @@ export const SENSOR_DEFAULTS: Record<string, Cavity[]> = {
 
 // ─── Ground Block ───────────────────────────────────────────────────────────
 
-export function groundBlockCavities(posts: 4 | 8): Cavity[] {
+export function groundBlockCavities(posts: number): Cavity[] {
   return [
     c('Main Stud'),
     ...Array.from({ length: posts }, (_, i) => c(`Post ${i + 1}`)),

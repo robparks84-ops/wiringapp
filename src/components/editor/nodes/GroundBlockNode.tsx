@@ -6,7 +6,7 @@ import type { Cavity } from '@/lib/nodeDefaults';
 
 export interface GroundBlockNodeData {
   label: string;
-  posts: 4 | 8;
+  posts: number;
   cavities: Cavity[];
   [key: string]: unknown;
 }

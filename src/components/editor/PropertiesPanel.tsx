@@ -2,13 +2,15 @@
 
 import {
   ActionIcon, Box, Button, ColorInput, Divider,
-  Group, ScrollArea, Select, Stack, Text, TextInput, Tooltip,
+  Group, NumberInput, ScrollArea, SegmentedControl, Select,
+  Stack, Switch, Text, Textarea, TextInput, Tooltip,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { IconPlus, IconTrash, IconX } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import type { Cavity, CavityNodeData } from '@/lib/nodeDefaults';
+import { groundBlockCavities } from '@/lib/nodeDefaults';
 
 interface PropertiesPanelProps {
   selected: { node?: Node; edge?: Edge } | null;
@@ -52,12 +54,30 @@ export function PropertiesPanel({
   // Local editable copy of cavities
   const [cavities, setCavities] = useState<Cavity[]>([]);
 
+  // Connector-specific fields
+  const [connColor, setConnColor]   = useState<string>('black');
+  const [gender, setGender]         = useState<string>('female');
+  const [sealed, setSealed]         = useState<boolean>(true);
+  const [notes, setNotes]           = useState<string>('');
+
+  // Ground block posts
+  const [posts, setPosts]           = useState<number>(4);
+
   useEffect(() => {
     if (node) {
       const d = node.data as Record<string, unknown>;
       nodeForm.setValues({ label: (d.label as string) ?? '' });
       const raw = (d.cavities as Cavity[]) ?? [];
       setCavities(raw.map((c) => ({ ...c })));
+
+      // connector fields
+      setConnColor((d.connectorColor as string) ?? 'black');
+      setGender((d.gender as string) ?? 'female');
+      setSealed(typeof d.sealed === 'boolean' ? d.sealed : true);
+      setNotes((d.notes as string) ?? '');
+
+      // ground block
+      setPosts(typeof d.posts === 'number' ? d.posts : 4);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [node?.id]);
@@ -84,9 +104,9 @@ export function PropertiesPanel({
     );
   }
 
-  const isCavityNode = node && (
-    node.type === 'cavity' || node.type === 'groundBlock'
-  );
+  const isCavityNode = node && (node.type === 'cavity' || node.type === 'groundBlock');
+  const isConnector  = node?.type === 'cavity' && (node.data as CavityNodeData).category === 'connector';
+  const isGroundBlock = node?.type === 'groundBlock';
 
   function handleSaveLabel() {
     if (!node) return;
@@ -116,8 +136,45 @@ export function PropertiesPanel({
     if (node) onUpdateNode(node.id, { ...node.data, cavities: next });
   }
 
+  function handleConnectorColorChange(val: string) {
+    setConnColor(val);
+    if (!node) return;
+    const headerColor = val === 'gray' ? '#868e96' : '#212529';
+    onUpdateNode(node.id, { ...node.data, connectorColor: val, headerColor });
+  }
+
+  function handleGenderChange(val: string) {
+    setGender(val);
+    if (node) onUpdateNode(node.id, { ...node.data, gender: val });
+  }
+
+  function handleSealedChange(val: boolean) {
+    setSealed(val);
+    if (node) onUpdateNode(node.id, { ...node.data, sealed: val });
+  }
+
+  function handleNotesBlur(val: string) {
+    setNotes(val);
+    if (node) onUpdateNode(node.id, { ...node.data, notes: val });
+  }
+
+  function handlePostsChange(val: number | string) {
+    const n = typeof val === 'number' ? val : parseInt(val as string, 10);
+    if (!n || n < 1 || !node) return;
+    setPosts(n);
+    // Rebuild cavities: keep Main Stud + existing post labels up to n, fill new ones
+    const existing = cavities.slice(1); // skip Main Stud
+    const newPosts = Array.from({ length: n }, (_, i) => {
+      return existing[i] ?? { id: Math.random().toString(36).slice(2), label: `Post ${i + 1}` };
+    });
+    const mainStud = cavities[0] ?? { id: Math.random().toString(36).slice(2), label: 'Main Stud' };
+    const next = [mainStud, ...newPosts];
+    setCavities(next);
+    onUpdateNode(node.id, { ...node.data, posts: n, cavities: next });
+  }
+
   return (
-    <Box style={{ width: 230, borderLeft: '1px solid var(--mantine-color-gray-3)', background: 'var(--mantine-color-gray-0)', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+    <Box style={{ width: 240, borderLeft: '1px solid var(--mantine-color-gray-3)', background: 'var(--mantine-color-gray-0)', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
       <Box p={10} style={{ borderBottom: '1px solid var(--mantine-color-gray-3)' }}>
         <Text fz={11} fw={700} tt="uppercase" c="dimmed" style={{ letterSpacing: 1 }}>
           {node ? 'Component' : 'Wire'}
@@ -140,6 +197,63 @@ export function PropertiesPanel({
                   Set
                 </Button>
               </Group>
+
+              {/* Ground block: posts control */}
+              {isGroundBlock && (
+                <>
+                  <Divider label="Ground Block" labelPosition="left" fz={10} />
+                  <NumberInput
+                    label="Posts"
+                    size="xs"
+                    min={1}
+                    max={20}
+                    value={posts}
+                    onChange={handlePostsChange}
+                  />
+                </>
+              )}
+
+              {/* Connector properties */}
+              {isConnector && (
+                <>
+                  <Divider label="Connector" labelPosition="left" fz={10} />
+                  <Text fz={11} fw={500} c="dimmed">Color</Text>
+                  <SegmentedControl
+                    size="xs"
+                    value={connColor}
+                    onChange={handleConnectorColorChange}
+                    data={[
+                      { label: 'Black', value: 'black' },
+                      { label: 'Gray',  value: 'gray'  },
+                    ]}
+                  />
+                  <Text fz={11} fw={500} c="dimmed">Gender</Text>
+                  <SegmentedControl
+                    size="xs"
+                    value={gender}
+                    onChange={handleGenderChange}
+                    data={[
+                      { label: 'Female', value: 'female' },
+                      { label: 'Male',   value: 'male'   },
+                    ]}
+                  />
+                  <Switch
+                    label="Sealed / Weatherproof"
+                    size="xs"
+                    checked={sealed}
+                    onChange={(e) => handleSealedChange(e.currentTarget.checked)}
+                  />
+                  <Textarea
+                    label="Notes"
+                    size="xs"
+                    rows={2}
+                    value={notes}
+                    onChange={(e) => setNotes(e.currentTarget.value)}
+                    onBlur={(e) => handleNotesBlur(e.currentTarget.value)}
+                    placeholder="e.g. route through firewall grommet"
+                  />
+                </>
+              )}
 
               {/* Cavities (cavity node and groundBlock) */}
               {isCavityNode && (
@@ -181,7 +295,7 @@ export function PropertiesPanel({
                 </>
               )}
 
-              {/* Ground / Splice nodes — just label */}
+              {/* Ground / Splice nodes */}
               {(node.type === 'ground' || node.type === 'splice') && (
                 <TextInput
                   label="Location"

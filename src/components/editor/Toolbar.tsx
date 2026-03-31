@@ -57,9 +57,8 @@ const GROUPS: { group: string; items: ToolbarItem[] }[] = [
   {
     group: 'Grounds',
     items: [
-      { type: 'ground',       subtype: 'Ground',        label: 'Chassis Ground',   color: '#212529' },
-      { type: 'groundBlock',  subtype: 'GroundBlock4',  label: 'Ground Block 4-post', color: '#212529' },
-      { type: 'groundBlock',  subtype: 'GroundBlock8',  label: 'Ground Block 8-post', color: '#212529' },
+      { type: 'ground',      subtype: 'Ground',      label: 'Chassis Ground', color: '#212529' },
+      { type: 'groundBlock', subtype: 'GroundBlock', label: 'Ground Block',   color: '#212529' },
     ],
   },
   {
