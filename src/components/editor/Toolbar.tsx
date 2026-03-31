@@ -173,17 +173,18 @@ export function Toolbar({ onAdd }: ToolbarProps) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '2px 4px',
+                  padding: '3px 6px',
                   borderRadius: 4,
                   cursor: 'pointer',
+                  background: 'var(--mantine-color-gray-2)',
                 }}
               >
-                <Text fz={10} fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: 0.5 }}>
+                <Text fz={11} fw={700} c="dark" tt="uppercase" style={{ letterSpacing: 0.5 }}>
                   {group.group}
                 </Text>
                 {isCollapsed
-                  ? <IconChevronRight size={11} color="var(--mantine-color-dimmed)" />
-                  : <IconChevronDown  size={11} color="var(--mantine-color-dimmed)" />
+                  ? <IconChevronRight size={12} />
+                  : <IconChevronDown  size={12} />
                 }
               </UnstyledButton>
 
