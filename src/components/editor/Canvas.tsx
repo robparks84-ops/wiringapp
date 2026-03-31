@@ -12,13 +12,9 @@ import {
   type Node,
   type Edge,
   BackgroundVariant,
-  Panel,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useCallback, useState } from 'react';
-import { Button, Group, Text } from '@mantine/core';
-import { IconDeviceFloppy, IconTrash } from '@tabler/icons-react';
-import { notifications } from '@mantine/notifications';
+import { useCallback, useEffect } from 'react';
 
 import { ConnectorNode } from './nodes/ConnectorNode';
 import { GroundNode } from './nodes/GroundNode';
@@ -27,6 +23,7 @@ import { DeviceNode } from './nodes/DeviceNode';
 import { WireEdge } from './edges/WireEdge';
 import { Toolbar } from './Toolbar';
 import { PropertiesPanel } from './PropertiesPanel';
+import { useState } from 'react';
 
 const NODE_TYPES = {
   connector: ConnectorNode,
@@ -39,66 +36,6 @@ const EDGE_TYPES = {
   wire: WireEdge,
 };
 
-const INITIAL_NODES: Node[] = [
-  {
-    id: 'ecu-1',
-    type: 'device',
-    position: { x: 80, y: 160 },
-    data: {
-      label: 'Haltech ECU',
-      subtype: 'ECU',
-      channels: ['IGN SW', 'INJ 1', 'INJ 2', 'CAN H', 'CAN L', 'GND'],
-    },
-  },
-  {
-    id: 'pdm-1',
-    type: 'device',
-    position: { x: 80, y: 440 },
-    data: {
-      label: 'AEM PDM',
-      subtype: 'PDM',
-      channels: ['Ch1 Fan', 'Ch2 Fuel Pump', 'Ch3 ECU', 'Ch4 Lights', 'GND'],
-    },
-  },
-  {
-    id: 'conn-1',
-    type: 'connector',
-    position: { x: 440, y: 160 },
-    data: {
-      label: 'Header Harness',
-      subtype: 'DT',
-      pins: 4,
-      pinLabels: ['IGN', 'INJ1', 'INJ2', 'GND'],
-    },
-  },
-  {
-    id: 'gnd-1',
-    type: 'ground',
-    position: { x: 480, y: 480 },
-    data: { label: 'GND-1', location: 'Chassis' },
-  },
-];
-
-const INITIAL_EDGES: Edge[] = [
-  {
-    id: 'e1',
-    source: 'ecu-1',
-    sourceHandle: 'ch-0',
-    target: 'conn-1',
-    targetHandle: 'pin-0',
-    type: 'wire',
-    data: { color: '#c92a2a', gauge: '20 AWG', label: 'IGN_SW' },
-  },
-  {
-    id: 'e2',
-    source: 'pdm-1',
-    sourceHandle: 'ch-4',
-    target: 'gnd-1',
-    type: 'wire',
-    data: { color: '#212529', gauge: '14 AWG', label: 'PDM_GND' },
-  },
-];
-
 interface SelectedItem {
   node?: Node;
   edge?: Edge;
@@ -106,10 +43,40 @@ interface SelectedItem {
 
 let nodeCounter = 100;
 
-export function Canvas() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
+interface CanvasProps {
+  initialNodes?: Node[];
+  initialEdges?: Edge[];
+  onSave?: (nodes: Node[], edges: Edge[]) => void;
+  saving?: boolean;
+  wireSearch?: string;
+}
+
+export function Canvas({ initialNodes = [], initialEdges = [], onSave, wireSearch = '' }: CanvasProps) {
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selected, setSelected] = useState<SelectedItem | null>(null);
+
+  // Sync when parent loads doc data
+  useEffect(() => {
+    if (initialNodes.length > 0 || initialEdges.length > 0) {
+      setNodes(initialNodes);
+      setEdges(initialEdges);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Highlight wires matching search
+  const displayEdges = edges.map((e) => {
+    if (!wireSearch) return e;
+    const label = (e.data?.label as string) ?? '';
+    const matched = label.toLowerCase().includes(wireSearch.toLowerCase());
+    return {
+      ...e,
+      style: matched
+        ? { stroke: e.data?.color as string, strokeWidth: 5, filter: 'drop-shadow(0 0 6px #f08c00)' }
+        : { opacity: 0.2 },
+    };
+  });
 
   const onConnect: OnConnect = useCallback(
     (connection) =>
@@ -128,25 +95,17 @@ export function Canvas() {
     const newNode: Node = {
       id,
       type,
-      position: { x: 300 + Math.random() * 80, y: 200 + Math.random() * 80 },
+      position: { x: 200 + Math.random() * 120, y: 200 + Math.random() * 120 },
       data: buildDefaultData(type, subtype),
     };
     setNodes((nds) => [...nds, newNode]);
   }
 
   function buildDefaultData(type: string, subtype: string): Record<string, unknown> {
-    if (type === 'connector') {
-      return { label: `New ${subtype}`, subtype, pins: 4, pinLabels: ['1', '2', '3', '4'] };
-    }
-    if (type === 'device') {
-      return { label: `New ${subtype}`, subtype, channels: ['Ch1', 'Ch2', 'Ch3'] };
-    }
-    if (type === 'ground') {
-      return { label: 'GND', location: '' };
-    }
-    if (type === 'splice') {
-      return { label: 'SP' };
-    }
+    if (type === 'connector') return { label: `New ${subtype}`, subtype, pins: 4, pinLabels: ['1', '2', '3', '4'] };
+    if (type === 'device') return { label: `New ${subtype}`, subtype, channels: ['Ch1', 'Ch2', 'Ch3'] };
+    if (type === 'ground') return { label: 'GND', location: '' };
+    if (type === 'splice') return { label: 'SP' };
     return { label: subtype };
   }
 
@@ -169,19 +128,17 @@ export function Canvas() {
     setSelected(null);
   }
 
-  function handleSave() {
-    const data = { nodes, edges };
-    localStorage.setItem('wiringapp_canvas', JSON.stringify(data));
-    notifications.show({ message: 'Design saved to browser.', color: 'green' });
-  }
-
-  function handleClear() {
-    if (confirm('Clear the entire canvas? This cannot be undone.')) {
-      setNodes([]);
-      setEdges([]);
-      setSelected(null);
+  // Keyboard shortcut: Ctrl+S / Cmd+S to save
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        onSave?.(nodes, edges);
+      }
     }
-  }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [nodes, edges, onSave]);
 
   return (
     <div style={{ display: 'flex', height: '100%', width: '100%' }}>
@@ -190,7 +147,7 @@ export function Canvas() {
       <div style={{ flex: 1, position: 'relative' }}>
         <ReactFlow
           nodes={nodes}
-          edges={edges}
+          edges={displayEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
@@ -205,29 +162,6 @@ export function Canvas() {
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#ced4da" />
           <Controls />
           <MiniMap zoomable pannable nodeStrokeWidth={3} />
-
-          <Panel position="top-right">
-            <Group gap="xs">
-              <Text fz={11} c="dimmed">Tip: drag from a pin handle to connect wires</Text>
-              <Button
-                size="xs"
-                leftSection={<IconDeviceFloppy size={14} />}
-                onClick={handleSave}
-                variant="light"
-              >
-                Save
-              </Button>
-              <Button
-                size="xs"
-                leftSection={<IconTrash size={14} />}
-                onClick={handleClear}
-                variant="light"
-                color="red"
-              >
-                Clear
-              </Button>
-            </Group>
-          </Panel>
         </ReactFlow>
       </div>
 
