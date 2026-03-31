@@ -28,6 +28,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { notifications } from '@mantine/notifications';
+import Link from 'next/link';
 
 interface HarnessDoc {
   id: string;
@@ -138,7 +139,7 @@ export default function DashboardPage() {
               {user.name} &mdash; {user.email}
             </Text>
           </Box>
-          <Button leftSection={<IconPlus size={16} />} onClick={handleNewDocument}>
+          <Button leftSection={<IconPlus size={16} />} component={Link} href="/editor">
             New design
           </Button>
         </Group>
