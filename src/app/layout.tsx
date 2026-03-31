@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { ColorSchemeScript, MantineProvider } from '@mantine/core';
+import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { AuthProvider } from '@/contexts/AuthContext';
 import '@mantine/core/styles.css';
@@ -14,9 +14,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <ColorSchemeScript />
-      </head>
+      <head />
       <body>
         <MantineProvider defaultColorScheme="auto">
           <Notifications />
