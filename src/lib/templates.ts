@@ -1,4 +1,8 @@
 import type { Node, Edge } from '@xyflow/react';
+import {
+  MS3PRO_EVO_C1, MS3PRO_EVO_C2, AIM_PDM32, groundBlockCavities,
+  SENSOR_DEFAULTS, type Cavity,
+} from './nodeDefaults';
 
 export interface Template {
   id: string;
@@ -6,6 +10,37 @@ export interface Template {
   description: string;
   nodes: Node[];
   edges: Edge[];
+}
+
+// Fresh IDs every time a template is used
+function fc(cavities: Cavity[]): Cavity[] {
+  return cavities.map((c) => ({ ...c, id: Math.random().toString(36).slice(2) }));
+}
+
+function cavityNode(id: string, subtype: string, label: string, color: string, cavities: Cavity[], pos: { x: number; y: number }, category: string): Node {
+  return {
+    id,
+    type: 'cavity',
+    position: pos,
+    data: { label, subtype, category, headerColor: color, cavities: fc(cavities) },
+  };
+}
+
+function groundBlockNode(id: string, posts: 4 | 8, label: string, pos: { x: number; y: number }): Node {
+  return {
+    id,
+    type: 'groundBlock',
+    position: pos,
+    data: { label, posts, cavities: fc(groundBlockCavities(posts)), headerColor: '#212529' },
+  };
+}
+
+function groundNode(id: string, label: string, location: string, pos: { x: number; y: number }): Node {
+  return { id, type: 'ground', position: pos, data: { label, location } };
+}
+
+function spliceNode(id: string, label: string, pos: { x: number; y: number }): Node {
+  return { id, type: 'splice', position: pos, data: { label } };
 }
 
 export const TEMPLATES: Template[] = [
@@ -18,44 +53,74 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'efi-4cyl',
-    name: '4-Cylinder EFI',
-    description: 'ECU, PDM, 4 injectors, coils, sensors, grounds.',
+    name: '4-Cylinder EFI (MS3Pro + AIM PDM32)',
+    description: 'MS3Pro Evo C1 & C2, AIM PDM32, common sensors, ground blocks.',
     nodes: [
-      { id: 'ecu', type: 'device', position: { x: 60, y: 180 }, data: { label: 'ECU', subtype: 'ECU', channels: ['INJ 1','INJ 2','INJ 3','INJ 4','IGN 1','IGN 2','IGN 3','IGN 4','TPS','MAP','CLT','IAT','CAN H','CAN L','GND'] } },
-      { id: 'pdm', type: 'device', position: { x: 60, y: 520 }, data: { label: 'PDM', subtype: 'PDM', channels: ['Ch1 Fuel Pump','Ch2 Fan','Ch3 ECU','Ch4 Dash','Ch5 Spare','12V In','GND'] } },
-      { id: 'inj-bank', type: 'connector', position: { x: 480, y: 80 }, data: { label: 'Injector Bank', subtype: 'DTM', pins: 4, pinLabels: ['INJ1','INJ2','INJ3','INJ4'] } },
-      { id: 'coil-bank', type: 'connector', position: { x: 480, y: 220 }, data: { label: 'Coil Pack', subtype: 'DT', pins: 4, pinLabels: ['IGN1','IGN2','IGN3','IGN4'] } },
-      { id: 'sensor-conn', type: 'connector', position: { x: 480, y: 360 }, data: { label: 'Sensor Loom', subtype: 'DT', pins: 4, pinLabels: ['TPS','MAP','CLT','IAT'] } },
-      { id: 'bulkhead', type: 'connector', position: { x: 280, y: 300 }, data: { label: 'Bulkhead', subtype: 'Bulkhead', pins: 8, pinLabels: ['A','B','C','D','E','F','G','H'] } },
-      { id: 'gnd-1', type: 'ground', position: { x: 500, y: 540 }, data: { label: 'GND-1', location: 'Block' } },
-      { id: 'gnd-2', type: 'ground', position: { x: 600, y: 540 }, data: { label: 'GND-2', location: 'Chassis' } },
-      { id: 'splice-gnd', type: 'splice', position: { x: 380, y: 490 }, data: { label: 'SP-GND' } },
+      cavityNode('ecu-c1', 'ECU-C1', 'MS3Pro Evo C1', '#1864ab', MS3PRO_EVO_C1, { x: 40, y: 40 }, 'ecu'),
+      cavityNode('ecu-c2', 'ECU-C2', 'MS3Pro Evo C2', '#1864ab', MS3PRO_EVO_C2, { x: 40, y: 900 }, 'ecu'),
+      cavityNode('pdm',    'AIM PDM32', 'AIM PDM32',   '#5c2d91', AIM_PDM32,     { x: 500, y: 40 }, 'pdm'),
+      cavityNode('tps',    'TPS',       'TPS',          '#0c8599', SENSOR_DEFAULTS['TPS'],    { x: 900, y: 40 },  'sensor'),
+      cavityNode('map',    'MAP',       'MAP',          '#0c8599', SENSOR_DEFAULTS['MAP'],    { x: 900, y: 130 }, 'sensor'),
+      cavityNode('clt',    'CLT',       'CLT',          '#0c8599', SENSOR_DEFAULTS['CLT'],    { x: 900, y: 220 }, 'sensor'),
+      cavityNode('iat',    'IAT',       'IAT',          '#0c8599', SENSOR_DEFAULTS['IAT'],    { x: 900, y: 290 }, 'sensor'),
+      cavityNode('crank',  'Crank Position', 'Crank Position', '#0c8599', SENSOR_DEFAULTS['Crank Position'], { x: 900, y: 380 }, 'sensor'),
+      cavityNode('cam',    'Cam Position',   'Cam Position',   '#0c8599', SENSOR_DEFAULTS['Cam Position'],   { x: 900, y: 470 }, 'sensor'),
+      cavityNode('lambda', 'Lambda / WBO2',  'Lambda / WBO2',  '#0c8599', SENSOR_DEFAULTS['Lambda / WBO2'],  { x: 900, y: 560 }, 'sensor'),
+      cavityNode('oilp',   'Oil Pressure',   'Oil Pressure',   '#0c8599', SENSOR_DEFAULTS['Oil Pressure'],   { x: 900, y: 670 }, 'sensor'),
+      groundBlockNode('gnd-block-4', 4, 'Sensor GND Block', { x: 900, y: 780 }),
+      groundBlockNode('gnd-block-8', 8, 'Main GND Block',   { x: 1100, y: 40 }),
+      groundNode('gnd-chassis', 'GND', 'Chassis', { x: 1100, y: 500 }),
+      spliceNode('sp-5v', '5V Ref', { x: 700, y: 40 }),
     ],
     edges: [],
   },
   {
-    id: 'pdm-power',
-    name: 'PDM Power Distribution',
-    description: 'PDM with fused outputs, battery, main relay.',
+    id: 'efi-6cyl',
+    name: '6-Cylinder EFI (MS3Pro + AIM PDM32)',
+    description: 'MS3Pro Evo C1 & C2, AIM PDM32, sensors for inline-6 or V6.',
     nodes: [
-      { id: 'pdm', type: 'device', position: { x: 200, y: 200 }, data: { label: 'PDM', subtype: 'PDM', channels: ['Ch1 Starter','Ch2 Fuel Pump','Ch3 Fan','Ch4 ECU','Ch5 Dash','Ch6 Lights','Batt +','GND'] } },
-      { id: 'batt-conn', type: 'connector', position: { x: 560, y: 100 }, data: { label: 'Battery +', subtype: 'DTP', pins: 2, pinLabels: ['B+','—'] } },
-      { id: 'starter-conn', type: 'connector', position: { x: 560, y: 220 }, data: { label: 'Starter', subtype: 'DT', pins: 2, pinLabels: ['IGN','GND'] } },
-      { id: 'fuel-conn', type: 'connector', position: { x: 560, y: 320 }, data: { label: 'Fuel Pump', subtype: 'DTM', pins: 2, pinLabels: ['+12V','GND'] } },
-      { id: 'gnd-main', type: 'ground', position: { x: 560, y: 440 }, data: { label: 'GND-MAIN', location: 'Chassis' } },
+      cavityNode('ecu-c1', 'ECU-C1', 'MS3Pro Evo C1', '#1864ab', MS3PRO_EVO_C1, { x: 40, y: 40 }, 'ecu'),
+      cavityNode('ecu-c2', 'ECU-C2', 'MS3Pro Evo C2', '#1864ab', MS3PRO_EVO_C2, { x: 40, y: 900 }, 'ecu'),
+      cavityNode('pdm',    'AIM PDM32', 'AIM PDM32',   '#5c2d91', AIM_PDM32,     { x: 500, y: 40 }, 'pdm'),
+      cavityNode('tps',    'TPS',       'TPS',          '#0c8599', SENSOR_DEFAULTS['TPS'],    { x: 900, y: 40 },  'sensor'),
+      cavityNode('map',    'MAP',       'MAP',          '#0c8599', SENSOR_DEFAULTS['MAP'],    { x: 900, y: 130 }, 'sensor'),
+      cavityNode('clt',    'CLT',       'CLT',          '#0c8599', SENSOR_DEFAULTS['CLT'],    { x: 900, y: 220 }, 'sensor'),
+      cavityNode('iat',    'IAT',       'IAT',          '#0c8599', SENSOR_DEFAULTS['IAT'],    { x: 900, y: 290 }, 'sensor'),
+      cavityNode('crank',  'Crank Position', 'Crank Position', '#0c8599', SENSOR_DEFAULTS['Crank Position'], { x: 900, y: 380 }, 'sensor'),
+      cavityNode('cam1',   'Cam Position',   'Cam 1',          '#0c8599', SENSOR_DEFAULTS['Cam Position'],   { x: 900, y: 470 }, 'sensor'),
+      cavityNode('cam2',   'Cam Position',   'Cam 2',          '#0c8599', SENSOR_DEFAULTS['Cam Position'],   { x: 900, y: 560 }, 'sensor'),
+      cavityNode('lambda', 'Lambda / WBO2',  'Lambda / WBO2',  '#0c8599', SENSOR_DEFAULTS['Lambda / WBO2'],  { x: 900, y: 650 }, 'sensor'),
+      cavityNode('oilp',   'Oil Pressure',   'Oil Pressure',   '#0c8599', SENSOR_DEFAULTS['Oil Pressure'],   { x: 900, y: 740 }, 'sensor'),
+      groundBlockNode('gnd-block-4', 4, 'Sensor GND Block', { x: 900, y: 850 }),
+      groundBlockNode('gnd-block-8', 8, 'Main GND Block',   { x: 1100, y: 40 }),
+      groundNode('gnd-chassis', 'GND', 'Chassis', { x: 1100, y: 500 }),
+      spliceNode('sp-5v', '5V Ref', { x: 700, y: 40 }),
     ],
     edges: [],
   },
   {
-    id: 'dash-loom',
-    name: 'Dash Loom',
-    description: 'Dash connector, CAN bus, switches, warning lights.',
+    id: 'efi-8cyl',
+    name: '8-Cylinder EFI (MS3Pro + AIM PDM32)',
+    description: 'MS3Pro Evo C1 & C2, AIM PDM32, sensors for V8.',
     nodes: [
-      { id: 'dash-conn', type: 'connector', position: { x: 120, y: 200 }, data: { label: 'Dash Main', subtype: 'DT', pins: 8, pinLabels: ['CAN H','CAN L','IGN SW','12V','GND','OIL WRN','TEMP WRN','SPARE'] } },
-      { id: 'ecu', type: 'device', position: { x: 460, y: 120 }, data: { label: 'ECU', subtype: 'ECU', channels: ['CAN H','CAN L','12V','GND'] } },
-      { id: 'sw-ign', type: 'connector', position: { x: 460, y: 300 }, data: { label: 'Ignition Switch', subtype: 'DTM', pins: 2, pinLabels: ['IGN_IN','IGN_OUT'] } },
-      { id: 'splice-can', type: 'splice', position: { x: 320, y: 160 }, data: { label: 'CAN' } },
-      { id: 'gnd-dash', type: 'ground', position: { x: 460, y: 460 }, data: { label: 'GND-DASH', location: 'Dash bar' } },
+      cavityNode('ecu-c1', 'ECU-C1', 'MS3Pro Evo C1', '#1864ab', MS3PRO_EVO_C1, { x: 40, y: 40 }, 'ecu'),
+      cavityNode('ecu-c2', 'ECU-C2', 'MS3Pro Evo C2', '#1864ab', MS3PRO_EVO_C2, { x: 40, y: 900 }, 'ecu'),
+      cavityNode('pdm',    'AIM PDM32', 'AIM PDM32',   '#5c2d91', AIM_PDM32,     { x: 500, y: 40 }, 'pdm'),
+      cavityNode('tps',    'TPS',       'TPS',          '#0c8599', SENSOR_DEFAULTS['TPS'],    { x: 900, y: 40 },  'sensor'),
+      cavityNode('map',    'MAP',       'MAP',          '#0c8599', SENSOR_DEFAULTS['MAP'],    { x: 900, y: 130 }, 'sensor'),
+      cavityNode('clt',    'CLT',       'CLT',          '#0c8599', SENSOR_DEFAULTS['CLT'],    { x: 900, y: 220 }, 'sensor'),
+      cavityNode('iat',    'IAT',       'IAT',          '#0c8599', SENSOR_DEFAULTS['IAT'],    { x: 900, y: 290 }, 'sensor'),
+      cavityNode('crank',  'Crank Position', 'Crank Position', '#0c8599', SENSOR_DEFAULTS['Crank Position'], { x: 900, y: 380 }, 'sensor'),
+      cavityNode('cam1',   'Cam Position',   'Cam 1 (Bank 1)', '#0c8599', SENSOR_DEFAULTS['Cam Position'],   { x: 900, y: 470 }, 'sensor'),
+      cavityNode('cam2',   'Cam Position',   'Cam 2 (Bank 2)', '#0c8599', SENSOR_DEFAULTS['Cam Position'],   { x: 900, y: 560 }, 'sensor'),
+      cavityNode('lambda1','Lambda / WBO2',  'Lambda Bank 1',  '#0c8599', SENSOR_DEFAULTS['Lambda / WBO2'],  { x: 900, y: 650 }, 'sensor'),
+      cavityNode('lambda2','Lambda / WBO2',  'Lambda Bank 2',  '#0c8599', SENSOR_DEFAULTS['Lambda / WBO2'],  { x: 1100, y: 40 }, 'sensor'),
+      cavityNode('oilp',   'Oil Pressure',   'Oil Pressure',   '#0c8599', SENSOR_DEFAULTS['Oil Pressure'],   { x: 1100, y: 130 }, 'sensor'),
+      cavityNode('oilt',   'Oil Temp',       'Oil Temp',       '#0c8599', SENSOR_DEFAULTS['Oil Temp'],       { x: 1100, y: 220 }, 'sensor'),
+      groundBlockNode('gnd-block-4', 4, 'Sensor GND Block', { x: 1100, y: 320 }),
+      groundBlockNode('gnd-block-8', 8, 'Main GND Block',   { x: 1100, y: 560 }),
+      groundNode('gnd-chassis', 'GND', 'Chassis', { x: 1100, y: 850 }),
+      spliceNode('sp-5v', '5V Ref', { x: 700, y: 40 }),
     ],
     edges: [],
   },

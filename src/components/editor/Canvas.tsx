@@ -16,20 +16,26 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useCallback, useEffect } from 'react';
 
-import { ConnectorNode } from './nodes/ConnectorNode';
+import { CavityNode } from './nodes/CavityNode';
+import { GroundBlockNode } from './nodes/GroundBlockNode';
 import { GroundNode } from './nodes/GroundNode';
 import { SpliceNode } from './nodes/SpliceNode';
-import { DeviceNode } from './nodes/DeviceNode';
 import { WireEdge } from './edges/WireEdge';
 import { Toolbar } from './Toolbar';
 import { PropertiesPanel } from './PropertiesPanel';
 import { useState } from 'react';
+import {
+  DT_4, DTM_4, DTP_4, BULKHEAD_8,
+  MS3PRO_EVO_C1, MS3PRO_EVO_C2, AIM_PDM32,
+  SENSOR_DEFAULTS, groundBlockCavities, CATEGORY_COLORS,
+  type Cavity,
+} from '@/lib/nodeDefaults';
 
 const NODE_TYPES = {
-  connector: ConnectorNode,
+  cavity: CavityNode,
+  groundBlock: GroundBlockNode,
   ground: GroundNode,
   splice: SpliceNode,
-  device: DeviceNode,
 };
 
 const EDGE_TYPES = {
@@ -42,6 +48,10 @@ interface SelectedItem {
 }
 
 let nodeCounter = 100;
+
+function freshCavities(cavities: Cavity[]): Cavity[] {
+  return cavities.map((c) => ({ ...c, id: Math.random().toString(36).slice(2) }));
+}
 
 interface CanvasProps {
   initialNodes?: Node[];
@@ -102,19 +112,77 @@ export function Canvas({ initialNodes = [], initialEdges = [], onSave, wireSearc
   }
 
   function buildDefaultData(type: string, subtype: string): Record<string, unknown> {
-    if (type === 'connector') return { label: `New ${subtype}`, subtype, pins: 4, pinLabels: ['1', '2', '3', '4'] };
-    if (type === 'device') return { label: `New ${subtype}`, subtype, channels: ['Ch1', 'Ch2', 'Ch3'] };
+    const color = CATEGORY_COLORS[subtype] ?? '#495057';
+
     if (type === 'ground') return { label: 'GND', location: '' };
-    if (type === 'splice') return { label: 'SP' };
+    if (type === 'splice') return { label: 'SP', subtype: 'Splice' };
+
+    if (type === 'groundBlock') {
+      const posts: 4 | 8 = subtype === 'GroundBlock8' ? 8 : 4;
+      return {
+        label: `${posts}-Post GND`,
+        posts,
+        cavities: freshCavities(groundBlockCavities(posts)),
+        headerColor: CATEGORY_COLORS['GroundBlock'] ?? '#212529',
+      };
+    }
+
+    // cavity type — all connectors, ECU, PDM, sensors, blank
+    if (type === 'cavity') {
+      const base = { subtype, headerColor: color };
+
+      switch (subtype) {
+        case 'DT':        return { ...base, label: 'DT Connector',   category: 'connector', cavities: freshCavities(DT_4) };
+        case 'DTM':       return { ...base, label: 'DTM Connector',  category: 'connector', cavities: freshCavities(DTM_4) };
+        case 'DTP':       return { ...base, label: 'DTP Connector',  category: 'connector', cavities: freshCavities(DTP_4) };
+        case 'AT':        return { ...base, label: 'AT Connector',   category: 'connector', cavities: freshCavities(DT_4) };
+        case 'ATM':       return { ...base, label: 'ATM Connector',  category: 'connector', cavities: freshCavities(DTM_4) };
+        case 'Bulkhead':  return { ...base, label: 'Bulkhead',       category: 'connector', cavities: freshCavities(BULKHEAD_8) };
+        case 'ECU-C1':    return { ...base, label: 'MS3Pro Evo C1',  category: 'ecu',       cavities: freshCavities(MS3PRO_EVO_C1) };
+        case 'ECU-C2':    return { ...base, label: 'MS3Pro Evo C2',  category: 'ecu',       cavities: freshCavities(MS3PRO_EVO_C2) };
+        case 'AIM PDM32': return { ...base, label: 'AIM PDM32',      category: 'pdm',       cavities: freshCavities(AIM_PDM32) };
+        case 'Blank':     return { ...base, label: 'Custom Device',  category: 'blank',     cavities: [{ id: Math.random().toString(36).slice(2), label: 'Pin 1' }, { id: Math.random().toString(36).slice(2), label: 'Pin 2' }] };
+        default: {
+          // Sensors
+          const sensorCavities = SENSOR_DEFAULTS[subtype];
+          if (sensorCavities) {
+            return { ...base, label: subtype, category: 'sensor', cavities: freshCavities(sensorCavities), headerColor: CATEGORY_COLORS['Sensor'] ?? color };
+          }
+          return { ...base, label: subtype, category: 'blank', cavities: [] };
+        }
+      }
+    }
+
     return { label: subtype };
   }
 
   function handleUpdateNode(id: string, data: Record<string, unknown>) {
     setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data } : n)));
+    // Keep selected in sync
+    setSelected((sel) => sel?.node?.id === id ? { node: { ...sel.node, data } } : sel);
   }
 
   function handleUpdateEdge(id: string, data: Record<string, unknown>) {
     setEdges((eds) => eds.map((e) => (e.id === id ? { ...e, data } : e)));
+  }
+
+  function handleRemoveCavity(nodeId: string, cavityId: string) {
+    // Remove the cavity from node data
+    setNodes((nds) =>
+      nds.map((n) => {
+        if (n.id !== nodeId) return n;
+        const d = n.data as Record<string, unknown>;
+        const cavities = (d.cavities as Cavity[]) ?? [];
+        return { ...n, data: { ...d, cavities: cavities.filter((c) => c.id !== cavityId) } };
+      })
+    );
+    // Remove any edges connected to that cavity's handles
+    setEdges((eds) =>
+      eds.filter(
+        (e) =>
+          !(e.sourceHandle?.includes(cavityId) || e.targetHandle?.includes(cavityId))
+      )
+    );
   }
 
   function handleDelete() {
@@ -170,6 +238,7 @@ export function Canvas({ initialNodes = [], initialEdges = [], onSave, wireSearc
         onUpdateNode={handleUpdateNode}
         onUpdateEdge={handleUpdateEdge}
         onDelete={handleDelete}
+        onRemoveCavity={handleRemoveCavity}
       />
     </div>
   );
