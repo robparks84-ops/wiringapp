@@ -15,7 +15,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useCallback, useEffect } from 'react';
-import { Button, Group, Tooltip } from '@mantine/core';
+import { ActionIcon, Button, Group, Tooltip } from '@mantine/core';
 import { IconRoute, IconRouteOff, IconTag, IconTagOff } from '@tabler/icons-react';
 
 import { CavityNode } from './nodes/CavityNode';
@@ -293,59 +293,34 @@ export function Canvas({ initialNodes = [], initialEdges = [], onSave, wireSearc
           }}
         >
           <Tooltip label="Auto-route selected wire" withArrow position="bottom">
-            <Button
-              size="xs"
-              variant="subtle"
-              leftSection={<IconRoute size={13} />}
-              disabled={!selected?.edge}
-              onClick={handleAutoRouteSelected}
-            >
-              Route Wire
-            </Button>
+            <ActionIcon size="sm" variant="subtle" disabled={!selected?.edge} onClick={handleAutoRouteSelected}>
+              <IconRoute size={14} />
+            </ActionIcon>
           </Tooltip>
           <Tooltip label="Auto-route all wires" withArrow position="bottom">
-            <Button
-              size="xs"
-              variant="subtle"
-              leftSection={<IconRoute size={13} />}
-              onClick={handleAutoRouteAll}
-            >
-              Route All
-            </Button>
+            <ActionIcon size="sm" variant="subtle" onClick={handleAutoRouteAll}>
+              <IconRoute size={14} />
+            </ActionIcon>
           </Tooltip>
-          <Tooltip label="Straighten selected wire (clear waypoints)" withArrow position="bottom">
-            <Button
-              size="xs"
-              variant="subtle"
-              color="gray"
-              leftSection={<IconRouteOff size={13} />}
-              disabled={!selected?.edge}
-              onClick={handleStraightenSelected}
-            >
-              Straighten
-            </Button>
+          <Tooltip label="Straighten selected wire" withArrow position="bottom">
+            <ActionIcon size="sm" variant="subtle" color="gray" disabled={!selected?.edge} onClick={handleStraightenSelected}>
+              <IconRouteOff size={14} />
+            </ActionIcon>
           </Tooltip>
           <Tooltip label="Straighten all wires" withArrow position="bottom">
-            <Button
-              size="xs"
-              variant="subtle"
-              color="gray"
-              leftSection={<IconRouteOff size={13} />}
-              onClick={handleStraightenAll}
-            >
-              Straighten All
-            </Button>
+            <ActionIcon size="sm" variant="subtle" color="gray" onClick={handleStraightenAll}>
+              <IconRouteOff size={14} />
+            </ActionIcon>
           </Tooltip>
           <Tooltip label={gaugeHidden ? 'Show gauge tags on all wires' : 'Hide gauge tags on all wires'} withArrow position="bottom">
-            <Button
-              size="xs"
+            <ActionIcon
+              size="sm"
               variant={gaugeHidden ? 'light' : 'subtle'}
               color={gaugeHidden ? 'orange' : 'gray'}
-              leftSection={gaugeHidden ? <IconTagOff size={13} /> : <IconTag size={13} />}
               onClick={handleToggleAllGauge}
             >
-              {gaugeHidden ? 'Show Gauge' : 'Hide Gauge'}
-            </Button>
+              {gaugeHidden ? <IconTagOff size={14} /> : <IconTag size={14} />}
+            </ActionIcon>
           </Tooltip>
         </Group>
 
