@@ -1,7 +1,8 @@
 import type { Node, Edge } from '@xyflow/react';
 import {
-  MS3PRO_EVO_C1, MS3PRO_EVO_C2, AIM_PDM32, groundBlockCavities,
-  SENSOR_DEFAULTS, connectorCavities, type Cavity,
+  MS3PRO_EVO_WHITE, MS3PRO_EVO_GRAY,
+  AIM_PDM32_BLACK, AIM_PDM32_GRAY,
+  groundBlockCavities, SENSOR_DEFAULTS, connectorCavities, type Cavity,
 } from './nodeDefaults';
 
 export interface Template {
@@ -80,10 +81,11 @@ export const TEMPLATES: Template[] = [
     description: 'MS3Pro Evo + AIM PDM32, individual connectors for every device.',
     nodes: [
       // ECU
-      cavityNode('ecu-c1', 'ECU-C1', 'MS3Pro Evo C1', '#1864ab', MS3PRO_EVO_C1, { x: X.ecu, y: 40 },  'ecu'),
-      cavityNode('ecu-c2', 'ECU-C2', 'MS3Pro Evo C2', '#1864ab', MS3PRO_EVO_C2, { x: X.ecu, y: 960 }, 'ecu'),
+      cavityNode('ecu-white', 'ECU-White', 'MS3Pro Evo White', '#1864ab', MS3PRO_EVO_WHITE, { x: X.ecu, y: 40 },  'ecu'),
+      cavityNode('ecu-gray',  'ECU-Gray',  'MS3Pro Evo Gray',  '#495057', MS3PRO_EVO_GRAY,  { x: X.ecu, y: 960 }, 'ecu'),
       // PDM
-      cavityNode('pdm', 'AIM PDM32', 'AIM PDM32', '#5c2d91', AIM_PDM32, { x: X.pdm, y: 40 }, 'pdm'),
+      cavityNode('pdm-black', 'PDM32-Black', 'AIM PDM32 Black', '#212529', AIM_PDM32_BLACK, { x: X.pdm, y: 40  }, 'pdm'),
+      cavityNode('pdm-gray',  'PDM32-Gray',  'AIM PDM32 Gray',  '#868e96', AIM_PDM32_GRAY,  { x: X.pdm, y: 1000 }, 'pdm'),
       // Injectors (DTM-2 Black Female Sealed)
       connNode('inj-1', 'Injector 1', 'DTM', 2, 'black', 'female', true, { x: X.conn, y: 40 }),
       connNode('inj-2', 'Injector 2', 'DTM', 2, 'black', 'female', true, { x: X.conn, y: 110 }),
@@ -132,9 +134,10 @@ export const TEMPLATES: Template[] = [
     name: '6-Cylinder EFI',
     description: 'MS3Pro Evo + AIM PDM32 for inline-6 or V6.',
     nodes: [
-      cavityNode('ecu-c1', 'ECU-C1', 'MS3Pro Evo C1', '#1864ab', MS3PRO_EVO_C1, { x: X.ecu, y: 40 },  'ecu'),
-      cavityNode('ecu-c2', 'ECU-C2', 'MS3Pro Evo C2', '#1864ab', MS3PRO_EVO_C2, { x: X.ecu, y: 960 }, 'ecu'),
-      cavityNode('pdm', 'AIM PDM32', 'AIM PDM32', '#5c2d91', AIM_PDM32, { x: X.pdm, y: 40 }, 'pdm'),
+      cavityNode('ecu-white', 'ECU-White', 'MS3Pro Evo White', '#1864ab', MS3PRO_EVO_WHITE, { x: X.ecu, y: 40 },  'ecu'),
+      cavityNode('ecu-gray',  'ECU-Gray',  'MS3Pro Evo Gray',  '#495057', MS3PRO_EVO_GRAY,  { x: X.ecu, y: 960 }, 'ecu'),
+      cavityNode('pdm-black', 'PDM32-Black', 'AIM PDM32 Black', '#212529', AIM_PDM32_BLACK, { x: X.pdm, y: 40   }, 'pdm'),
+      cavityNode('pdm-gray',  'PDM32-Gray',  'AIM PDM32 Gray',  '#868e96', AIM_PDM32_GRAY,  { x: X.pdm, y: 1000 }, 'pdm'),
       // Injectors
       connNode('inj-1', 'Injector 1', 'DTM', 2, 'black', 'female', true, { x: X.conn, y: 40  }),
       connNode('inj-2', 'Injector 2', 'DTM', 2, 'black', 'female', true, { x: X.conn, y: 110 }),
@@ -183,9 +186,10 @@ export const TEMPLATES: Template[] = [
     name: '8-Cylinder EFI',
     description: 'MS3Pro Evo + AIM PDM32 for V8.',
     nodes: [
-      cavityNode('ecu-c1', 'ECU-C1', 'MS3Pro Evo C1', '#1864ab', MS3PRO_EVO_C1, { x: X.ecu, y: 40 },   'ecu'),
-      cavityNode('ecu-c2', 'ECU-C2', 'MS3Pro Evo C2', '#1864ab', MS3PRO_EVO_C2, { x: X.ecu, y: 960 },  'ecu'),
-      cavityNode('pdm', 'AIM PDM32', 'AIM PDM32', '#5c2d91', AIM_PDM32, { x: X.pdm, y: 40 }, 'pdm'),
+      cavityNode('ecu-white', 'ECU-White', 'MS3Pro Evo White', '#1864ab', MS3PRO_EVO_WHITE, { x: X.ecu, y: 40 },   'ecu'),
+      cavityNode('ecu-gray',  'ECU-Gray',  'MS3Pro Evo Gray',  '#495057', MS3PRO_EVO_GRAY,  { x: X.ecu, y: 960 },  'ecu'),
+      cavityNode('pdm-black', 'PDM32-Black', 'AIM PDM32 Black', '#212529', AIM_PDM32_BLACK, { x: X.pdm, y: 40   }, 'pdm'),
+      cavityNode('pdm-gray',  'PDM32-Gray',  'AIM PDM32 Gray',  '#868e96', AIM_PDM32_GRAY,  { x: X.pdm, y: 1000 }, 'pdm'),
       // 8 Injectors
       connNode('inj-1', 'Injector 1', 'DTM', 2, 'black', 'female', true, { x: X.conn, y: 40  }),
       connNode('inj-2', 'Injector 2', 'DTM', 2, 'black', 'female', true, { x: X.conn, y: 110 }),

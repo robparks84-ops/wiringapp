@@ -1,14 +1,16 @@
 'use client';
 
-import { AppShell, Group, Text, ActionIcon, Menu, Badge, Tabs, Box, Button, TextInput } from '@mantine/core';
-import { IconWifi, IconUser, IconLogout, IconArrowLeft, IconDeviceFloppy, IconPrinter, IconList, IconPackage, IconSearch } from '@tabler/icons-react';
+import { AppShell, Group, Text, ActionIcon, Tabs, Box, Button, TextInput } from '@mantine/core';
+import {
+  IconWifi, IconArrowLeft, IconDeviceFloppy, IconPrinter,
+  IconList, IconPackage, IconSearch, IconX, IconUpload,
+} from '@tabler/icons-react';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
 import { Canvas } from '@/components/editor/Canvas';
 import { WireList } from '@/components/editor/WireList';
 import { BOM } from '@/components/editor/BOM';
-import { useEffect, useState, useCallback, use } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, useCallback, use, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { notifications } from '@mantine/notifications';
 import type { Node, Edge } from '@xyflow/react';
 import { TEMPLATES } from '@/lib/templates';
@@ -23,8 +25,6 @@ interface Doc {
 export default function EditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const searchParams = useSearchParams();
-  const { user, loading, logout } = useAuth();
-  const router = useRouter();
   const [doc, setDoc] = useState<Doc | null>(null);
   const [docLoading, setDocLoading] = useState(true);
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -34,13 +34,11 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   const [saving, setSaving] = useState(false);
   const [bottomTab, setBottomTab] = useState<string | null>(null);
   const [wireSearch, setWireSearch] = useState('');
+  const [canvasKey, setCanvasKey] = useState(0);
+  const importRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!loading && !user) router.replace('/login');
-  }, [user, loading, router]);
-
-  useEffect(() => {
-    if (!user || !id) return;
+    if (!id) return;
     fetch(`/api/documents/${id}`)
       .then((r) => r.json())
       .then((data) => {
@@ -48,7 +46,6 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
           const d = data.document;
           setDoc(d);
           setTitle(d.title);
-          // If nodes are empty and a template was specified, load it
           const templateId = searchParams.get('template');
           if (d.nodes.length === 0 && templateId) {
             const tpl = TEMPLATES.find((t) => t.id === templateId);
@@ -64,7 +61,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
       })
       .finally(() => setDocLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, id]);
+  }, [id]);
 
   const handleSave = useCallback(
     async (nodesToSave: Node[], edgesToSave: Edge[]) => {
@@ -95,11 +92,32 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     });
   }
 
-  function handlePrint() {
-    window.print();
+  function handleImportClick() {
+    importRef.current?.click();
   }
 
-  if (loading || docLoading || !user) return null;
+  function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const json = JSON.parse(evt.target?.result as string);
+        const importedNodes: Node[] = Array.isArray(json.nodes) ? json.nodes : [];
+        const importedEdges: Edge[] = Array.isArray(json.edges) ? json.edges : [];
+        setNodes(importedNodes);
+        setEdges(importedEdges);
+        setCanvasKey((k) => k + 1); // force Canvas remount with new data
+        notifications.show({ message: `Imported ${importedNodes.length} components, ${importedEdges.length} wires.`, color: 'blue' });
+      } catch {
+        notifications.show({ message: 'Invalid JSON file.', color: 'red' });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }
+
+  if (docLoading) return null;
 
   const bottomHeight = bottomTab ? 260 : 36;
 
@@ -111,6 +129,15 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
           .print-canvas { page-break-inside: avoid; }
         }
       `}</style>
+
+      {/* Hidden file input for JSON import */}
+      <input
+        ref={importRef}
+        type="file"
+        accept=".json,application/json"
+        style={{ display: 'none' }}
+        onChange={handleImportFile}
+      />
 
       <AppShell header={{ height: 50 }} style={{ height: '100vh' }}>
         <AppShell.Header p={0} className="no-print">
@@ -145,19 +172,12 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
               )}
             </Group>
             <Group gap="xs">
-              <Badge color={user.plan === 'pro' ? 'yellow' : 'gray'} variant="light" size="sm">{user.plan}</Badge>
-              <Button size="xs" leftSection={<IconPrinter size={14} />} variant="light" onClick={handlePrint}>Print</Button>
-              <Menu shadow="md" width={160}>
-                <Menu.Target>
-                  <ActionIcon variant="default" radius="xl" size="md">
-                    <IconUser size={14} />
-                  </ActionIcon>
-                </Menu.Target>
-                <Menu.Dropdown>
-                  <Menu.Label>{user.email}</Menu.Label>
-                  <Menu.Item leftSection={<IconLogout size={14} />} color="red" onClick={logout}>Sign out</Menu.Item>
-                </Menu.Dropdown>
-              </Menu>
+              <Button size="xs" leftSection={<IconUpload size={14} />} variant="light" onClick={handleImportClick}>
+                Import JSON
+              </Button>
+              <Button size="xs" leftSection={<IconPrinter size={14} />} variant="light" onClick={() => window.print()}>
+                Print
+              </Button>
             </Group>
           </Group>
         </AppShell.Header>
@@ -166,6 +186,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
           {/* Canvas area */}
           <Box style={{ flex: 1, minHeight: 0 }} className="print-canvas">
             <Canvas
+              key={canvasKey}
               initialNodes={nodes}
               initialEdges={edges}
               onSave={handleSave}
@@ -201,7 +222,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
                 <Tabs.Tab value="search" leftSection={<IconSearch size={13} />} fz="xs">
                   Find Wire
                 </Tabs.Tab>
-                <Box style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', paddingRight: 8 }}>
+                <Box style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, paddingRight: 8 }}>
                   <Button
                     size="xs"
                     variant="subtle"
@@ -211,6 +232,17 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
                   >
                     Save
                   </Button>
+                  {bottomTab && (
+                    <ActionIcon
+                      size="xs"
+                      variant="subtle"
+                      color="gray"
+                      onClick={() => setBottomTab(null)}
+                      title="Close panel"
+                    >
+                      <IconX size={13} />
+                    </ActionIcon>
+                  )}
                 </Box>
               </Tabs.List>
 

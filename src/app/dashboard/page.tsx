@@ -22,11 +22,9 @@ import {
 import {
   IconDots,
   IconLayoutDashboard,
-  IconLogout,
   IconPencil,
   IconPlus,
   IconTrash,
-  IconUser,
   IconWifi,
 } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
@@ -45,7 +43,7 @@ interface HarnessDoc {
 }
 
 export default function DashboardPage() {
-  const { user, loading, logout } = useAuth();
+  const { loading } = useAuth();
   const router = useRouter();
   const [docs, setDocs] = useState<HarnessDoc[]>([]);
   const [docsLoading, setDocsLoading] = useState(true);
@@ -55,16 +53,11 @@ export default function DashboardPage() {
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) router.replace('/login');
-  }, [user, loading, router]);
-
-  useEffect(() => {
-    if (!user) return;
     fetch('/api/documents')
       .then((r) => r.json())
       .then((data) => setDocs(data.documents ?? []))
       .finally(() => setDocsLoading(false));
-  }, [user]);
+  }, []);
 
   async function handleCreate() {
     if (!newTitle.trim()) return;
@@ -98,7 +91,7 @@ export default function DashboardPage() {
     setModalOpen(true);
   }
 
-  if (loading || !user) return null;
+  if (loading) return null;
 
   return (
     <>
@@ -110,20 +103,7 @@ export default function DashboardPage() {
               <Text fw={700} fz="lg">WiringApp</Text>
             </Group>
             <Group gap="xs">
-              <Badge color={user.plan === 'pro' ? 'yellow' : 'gray'} variant="light">{user.plan}</Badge>
-              <Menu shadow="md" width={180}>
-                <Menu.Target>
-                  <Tooltip label={user.name}>
-                    <ActionIcon variant="default" radius="xl" size="lg">
-                      <IconUser size={18} />
-                    </ActionIcon>
-                  </Tooltip>
-                </Menu.Target>
-                <Menu.Dropdown>
-                  <Menu.Label>{user.email}</Menu.Label>
-                  <Menu.Item leftSection={<IconLogout size={14} />} color="red" onClick={logout}>Sign out</Menu.Item>
-                </Menu.Dropdown>
-              </Menu>
+              <Badge color="blue" variant="light">WiringApp</Badge>
             </Group>
           </Group>
         </AppShell.Header>
@@ -138,10 +118,7 @@ export default function DashboardPage() {
 
         <AppShell.Main>
           <Group justify="space-between" mb="lg">
-            <Box>
-              <Title order={2} fz="xl">My Harness Designs</Title>
-              <Text c="dimmed" fz="sm">{user.name} — {user.email}</Text>
-            </Box>
+            <Title order={2} fz="xl">My Harness Designs</Title>
             <Button leftSection={<IconPlus size={16} />} onClick={openModal}>New design</Button>
           </Group>
 

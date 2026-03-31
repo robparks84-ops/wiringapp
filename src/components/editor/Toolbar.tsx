@@ -24,14 +24,15 @@ const GROUPS: { group: string; items: ToolbarItem[] }[] = [
   {
     group: 'ECU',
     items: [
-      { type: 'cavity', subtype: 'ECU-C1',   label: 'MS3Pro Evo C1 (34-pin)', color: '#1864ab' },
-      { type: 'cavity', subtype: 'ECU-C2',   label: 'MS3Pro Evo C2 (40-pin)', color: '#1864ab' },
+      { type: 'cavity', subtype: 'ECU-White', label: 'MS3Pro Evo White (35-pin)', color: '#1864ab' },
+      { type: 'cavity', subtype: 'ECU-Gray',  label: 'MS3Pro Evo Gray (35-pin)',  color: '#495057' },
     ],
   },
   {
     group: 'PDM',
     items: [
-      { type: 'cavity', subtype: 'AIM PDM32', label: 'AIM PDM32',    color: '#5c2d91' },
+      { type: 'cavity', subtype: 'PDM32-Black', label: 'AIM PDM32 Black (35-pin)', color: '#212529' },
+      { type: 'cavity', subtype: 'PDM32-Gray',  label: 'AIM PDM32 Gray (35-pin)',  color: '#868e96' },
     ],
   },
   {

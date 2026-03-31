@@ -41,47 +41,78 @@ export function connectorCavities(pinCount: number): Cavity[] {
   return Array.from({ length: pinCount }, (_, i) => c(`Cav ${i + 1}`));
 }
 
-// ─── MS3Pro Evo ─────────────────────────────────────────────────────────────
-
-export const MS3PRO_EVO_C1: Cavity[] = [
-  c('1 – GND'), c('2 – GND'), c('3 – BATT +12V'), c('4 – IGN +12V'), c('5 – IGN +12V'),
-  c('6 – Tach Out'), c('7 – Idle (IAC)'), c('8 – Fuel Pump'), c('9 – Fan Relay'),
-  c('10 – A/C Relay'), c('11 – CEL'), c('12 – Boost Ctrl'), c('13 – VVT 1'),
-  c('14 – VVT 2'), c('15 – PWM 3'), c('16 – Crank+ (VR1+)'), c('17 – Crank- (VR1-)'),
-  c('18 – Cam+ (VR2+)'), c('19 – Cam- (VR2-)'), c('20 – Cam2+ (VR3+)'), c('21 – Cam2- (VR3-)'),
-  c('22 – Dig Freq 1'), c('23 – Dig Freq 2'), c('24 – Dig Freq 3'),
-  c('25 – INJ 1'), c('26 – INJ 2'), c('27 – INJ 3'), c('28 – INJ 4'),
-  c('29 – INJ 5'), c('30 – INJ 6'), c('31 – INJ 7'), c('32 – INJ 8'),
-  c('33 – IGN 1'), c('34 – IGN 2'),
+// ─── MS3Pro Evo ──────────────────────────────────────────────────────────────
+// White connector (35-pin)
+export const MS3PRO_EVO_WHITE: Cavity[] = [
+  c('1 – High current out 1'),  c('2 – High current out 2'),  c('3 – Injector out J'),
+  c('4 – Injector out I'),      c('5 – High current out 3'),  c('6 – CKP+'),
+  c('7 – Knock In 2'),          c('8 – 5V+ VREF out'),        c('9 – TPS in'),
+  c('10 – MAT in'),             c('11 – CLT in'),             c('12 – Analog In 6'),
+  c('13 – Logic Ground'),       c('14 – PWM / Idle Out 1'),   c('15 – CKP-'),
+  c('16 – Ground'),             c('17 – Analog In 7'),        c('18 – Sensor return'),
+  c('19 – Analog in 1'),        c('20 – Analog in 2'),        c('21 – Analog in 3'),
+  c('22 – Analog In 4'),        c('23 – Analog In 5'),        c('24 – Tach out'),
+  c('25 – O2 in'),              c('26 – CMP+'),               c('27 – CMP-'),
+  c('28 – Fuel pump relay out'),c('29 – PWM out 2'),          c('30 – PWM out 3'),
+  c('31 – Knock in 1'),         c('32 – Digital switched in 1'), c('33 – CAN L'),
+  c('34 – CAN H'),              c('35 – 12V+ switched power in'),
 ];
 
-export const MS3PRO_EVO_C2: Cavity[] = [
-  c('1 – IGN 3'), c('2 – IGN 4'), c('3 – IGN 5'), c('4 – IGN 6'),
-  c('5 – IGN 7'), c('6 – IGN 8'),
-  c('7 – TPS'), c('8 – MAP'), c('9 – CLT'), c('10 – IAT'),
-  c('11 – O2 / Lambda'), c('12 – Knock 1'), c('13 – Knock 2'),
-  c('14 – EGT 1'), c('15 – EGT 2'),
-  c('16 – Analog 3'), c('17 – Analog 4'), c('18 – Analog 5'), c('19 – Analog 6'),
-  c('20 – Analog 7'), c('21 – Analog 8'), c('22 – Analog 9'), c('23 – Analog 10'),
-  c('24 – Batt Voltage'), c('25 – CAN H'), c('26 – CAN L'),
-  c('27 – USB D+'), c('28 – USB D-'),
-  c('29 – +5V Ref 1'), c('30 – +5V Ref 2'),
-  c('31 – Sensor GND 1'), c('32 – Sensor GND 2'), c('33 – Sensor GND 3'), c('34 – Sensor GND 4'),
-  c('35 – Dig Switch 1'), c('36 – Dig Switch 2'), c('37 – Dig Switch 3'), c('38 – Dig Switch 4'),
-  c('39 – Step 1A'), c('40 – Step 1B'),
+// Gray connector (35-pin)
+export const MS3PRO_EVO_GRAY: Cavity[] = [
+  c('1 – Injector out A'),      c('2 – Injector out B'),      c('3 – Ground'),
+  c('4 – Injector out C'),      c('5 – Ground'),              c('6 – Injector out D'),
+  c('7 – Ground'),              c('8 – Injector out E'),      c('9 – Ground'),
+  c('10 – Injector out F'),     c('11 – Injector out G'),     c('12 – Injector out H'),
+  c('13 – Spark out G'),        c('14 – Spark out E'),        c('15 – Spark out C'),
+  c('16 – Spark out H'),        c('17 – Digital frequency in 2'), c('18 – Ground'),
+  c('19 – Digital switched 12V in'), c('20 – Digital switched in 2'), c('21 – Digital frequency in 3'),
+  c('22 – Digital Freq in 3 VR+'), c('23 – Digital Freq In 3 VR-'), c('24 – Spark out F'),
+  c('25 – Spark out B'),        c('26 – Spark out D'),        c('27 – Spark out A'),
+  c('28 – Digital frequency in 1'), c('29 – Digital switched in 3'), c('30 – Stepper IAC out 1B'),
+  c('31 – Stepper IAC out 1A'), c('32 – Stepper IAC out 2A'), c('33 – Stepper IAC out 2B'),
+  c('34 – Digital Freq in 1 VR+'), c('35 – Digital Freq in 1 VR-'),
 ];
 
-// ─── AIM PDM32 ──────────────────────────────────────────────────────────────
+// Backward-compat aliases
+export const MS3PRO_EVO_C1 = MS3PRO_EVO_WHITE;
+export const MS3PRO_EVO_C2 = MS3PRO_EVO_GRAY;
 
-export const AIM_PDM32: Cavity[] = [
-  // Power / signal
-  c('BATT + (1)'), c('BATT + (2)'), c('GND (1)'), c('GND (2)'),
-  c('Key Switch +'), c('CAN H'), c('CAN L'),
-  // High-current outputs 1–16 (25 A max)
-  ...Array.from({ length: 16 }, (_, i) => c(`OUT ${i + 1} (H)`)),
-  // Low-current outputs 17–32 (10 A max)
-  ...Array.from({ length: 16 }, (_, i) => c(`OUT ${i + 17} (L)`)),
+// ─── AIM PDM32 ───────────────────────────────────────────────────────────────
+// Black connector (35-pin)
+export const AIM_PDM32_BLACK: Cavity[] = [
+  c('1 – High power output 1 *'), c('2 – Mid power output 1'),   c('3 – Mid power output 2'),
+  c('4 – Mid power output 3'),    c('5 – Mid power output 4'),   c('6 – Mid power output 5'),
+  c('7 – Mid power output 6'),    c('8 – Mid power output 7'),   c('9 – Mid power output 8'),
+  c('10 – GND'),                  c('11 – CAN AiM Low'),         c('12 – High power output 2'),
+  c('13 – High power output 1 *'),c('14 – Low power output 1'),  c('15 – Low power output 2'),
+  c('16 – Low power output 3'),   c('17 – Low power output 4'),  c('18 – Low power output 5'),
+  c('19 – Low power output 6'),   c('20 – Low power output 7'),  c('21 – Low power output 8'),
+  c('22 – CAN AiM High'),         c('23 – High power output 2'), c('24 – High power output 3'),
+  c('25 – High power output 3'),  c('26 – Channel input 11'),    c('27 – Channel input 12'),
+  c('28 – CAN2 High'),            c('29 – CAN2 Low'),            c('30 – CAN ECU High/RS232TX'),
+  c('31 – CAN ECU Low/RS232RX'),  c('32 – +Vb ext CAN'),         c('33 – +Vb out CAN'),
+  c('34 – High power output 4'),  c('35 – High power output 4'),
 ];
+
+// Gray connector (35-pin)
+export const AIM_PDM32_GRAY: Cavity[] = [
+  c('1 – Half bridge power out 1'), c('2 – Half bridge power out 1'), c('3 – Low power output 9'),
+  c('4 – Mid power output 9'),      c('5 – Mid power output 10'),     c('6 – Low power output 10'),
+  c('7 – Low power output 11'),     c('8 – Mid power output 11'),     c('9 – Mid power output 12'),
+  c('10 – Low power output 12'),    c('11 – Half bridge power out 2'),c('12 – Half bridge power out 2'),
+  c('13 – P GND'),                  c('14 – P GND'),                  c('15 – LIN'),
+  c('16 – +5V Analog Vreference'), c('17 – +Vb output'),              c('18 – GND'),
+  c('19 – Speed 2 input'),          c('20 – Speed 1 input'),          c('21 – Channel input 9'),
+  c('22 – Channel input 10'),       c('23 – Ignition'),               c('24 – Half bridge power out 3'),
+  c('25 – Half bridge power out 3'),c('26 – Channel input 1'),        c('27 – Channel input 2'),
+  c('28 – Channel input 3'),        c('29 – Channel input 4'),        c('30 – Channel input 5'),
+  c('31 – Channel input 6'),        c('32 – Channel input 7'),        c('33 – Channel input 8'),
+  c('34 – Half bridge power out 4'),c('35 – Half bridge power out 4'),
+];
+
+// Backward-compat alias
+export const AIM_PDM32 = AIM_PDM32_BLACK;
 
 // ─── Sensors ────────────────────────────────────────────────────────────────
 
@@ -115,16 +146,22 @@ export function groundBlockCavities(posts: number): Cavity[] {
 // ─── Header colors ──────────────────────────────────────────────────────────
 
 export const CATEGORY_COLORS: Record<string, string> = {
-  DT:            '#1971c2',
-  DTM:           '#2f9e44',
-  DTP:           '#e67700',
-  AT:            '#c92a2a',
-  ATM:           '#862e9c',
-  Bulkhead:      '#495057',
-  'ECU-C1':      '#1864ab',
-  'ECU-C2':      '#1864ab',
-  'AIM PDM32':   '#5c2d91',
-  Sensor:        '#0c8599',
-  Blank:         '#495057',
-  GroundBlock:   '#212529',
+  DT:              '#1971c2',
+  DTM:             '#2f9e44',
+  DTP:             '#e67700',
+  AT:              '#c92a2a',
+  ATM:             '#862e9c',
+  Bulkhead:        '#495057',
+  'ECU-White':     '#1864ab',
+  'ECU-Gray':      '#495057',
+  // backward compat
+  'ECU-C1':        '#1864ab',
+  'ECU-C2':        '#495057',
+  'PDM32-Black':   '#212529',
+  'PDM32-Gray':    '#868e96',
+  // backward compat
+  'AIM PDM32':     '#212529',
+  Sensor:          '#0c8599',
+  Blank:           '#495057',
+  GroundBlock:     '#212529',
 };

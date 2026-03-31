@@ -26,7 +26,8 @@ import { PropertiesPanel } from './PropertiesPanel';
 import { useState } from 'react';
 import {
   DT_4, DTM_4, DTP_4, BULKHEAD_8,
-  MS3PRO_EVO_C1, MS3PRO_EVO_C2, AIM_PDM32,
+  MS3PRO_EVO_WHITE, MS3PRO_EVO_GRAY,
+  AIM_PDM32_BLACK, AIM_PDM32_GRAY,
   SENSOR_DEFAULTS, groundBlockCavities, CATEGORY_COLORS,
   type Cavity,
 } from '@/lib/nodeDefaults';
@@ -92,7 +93,7 @@ export function Canvas({ initialNodes = [], initialEdges = [], onSave, wireSearc
     (connection) =>
       setEdges((eds) =>
         addEdge(
-          { ...connection, type: 'wire', data: { color: '#212529', gauge: '20 AWG', label: '' } },
+          { ...connection, type: 'wire', data: { color: '#212529', stripeColor: '', gauge: '20 AWG', label: '' } },
           eds
         )
       ),
@@ -139,9 +140,14 @@ export function Canvas({ initialNodes = [], initialEdges = [], onSave, wireSearc
         case 'AT':        return { ...connBase, label: 'AT Connector',   cavities: freshCavities(DT_4) };
         case 'ATM':       return { ...connBase, label: 'ATM Connector',  cavities: freshCavities(DTM_4) };
         case 'Bulkhead':  return { ...connBase, label: 'Bulkhead', connectorColor: 'gray', cavities: freshCavities(BULKHEAD_8) };
-        case 'ECU-C1':    return { ...base, label: 'MS3Pro Evo C1',  category: 'ecu',       cavities: freshCavities(MS3PRO_EVO_C1) };
-        case 'ECU-C2':    return { ...base, label: 'MS3Pro Evo C2',  category: 'ecu',       cavities: freshCavities(MS3PRO_EVO_C2) };
-        case 'AIM PDM32': return { ...base, label: 'AIM PDM32',      category: 'pdm',       cavities: freshCavities(AIM_PDM32) };
+        case 'ECU-White':   return { ...base, label: 'MS3Pro Evo White', category: 'ecu', cavities: freshCavities(MS3PRO_EVO_WHITE) };
+        case 'ECU-Gray':    return { ...base, label: 'MS3Pro Evo Gray',  category: 'ecu', cavities: freshCavities(MS3PRO_EVO_GRAY) };
+        case 'PDM32-Black': return { ...base, label: 'AIM PDM32 Black',  category: 'pdm', cavities: freshCavities(AIM_PDM32_BLACK), headerColor: '#212529' };
+        case 'PDM32-Gray':  return { ...base, label: 'AIM PDM32 Gray',   category: 'pdm', cavities: freshCavities(AIM_PDM32_GRAY),  headerColor: '#868e96' };
+        // backward compat
+        case 'ECU-C1':      return { ...base, label: 'MS3Pro Evo White', category: 'ecu', cavities: freshCavities(MS3PRO_EVO_WHITE) };
+        case 'ECU-C2':      return { ...base, label: 'MS3Pro Evo Gray',  category: 'ecu', cavities: freshCavities(MS3PRO_EVO_GRAY) };
+        case 'AIM PDM32':   return { ...base, label: 'AIM PDM32 Black',  category: 'pdm', cavities: freshCavities(AIM_PDM32_BLACK) };
         case 'Blank':     return { ...base, label: 'Custom Device',  category: 'blank',     cavities: [{ id: Math.random().toString(36).slice(2), label: 'Pin 1' }, { id: Math.random().toString(36).slice(2), label: 'Pin 2' }] };
         default: {
           const sensorCavities = SENSOR_DEFAULTS[subtype];
@@ -222,6 +228,8 @@ export function Canvas({ initialNodes = [], initialEdges = [], onSave, wireSearc
           nodeTypes={NODE_TYPES}
           edgeTypes={EDGE_TYPES}
           fitView
+          snapToGrid
+          snapGrid={[10, 10]}
           onNodeClick={(_, node) => setSelected({ node })}
           onEdgeClick={(_, edge) => setSelected({ edge })}
           onPaneClick={() => setSelected(null)}

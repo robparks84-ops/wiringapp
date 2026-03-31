@@ -49,7 +49,10 @@ export function PropertiesPanel({
   const edge = selected?.edge;
 
   const nodeForm = useForm({ initialValues: { label: '' } });
-  const edgeForm = useForm({ initialValues: { color: '#212529', gauge: '20 AWG', label: '' } });
+  const edgeForm = useForm({ initialValues: { color: '#212529', stripeColor: '', gauge: '20 AWG', label: '' } });
+
+  // Node header color (for all cavity/groundBlock nodes)
+  const [nodeColor, setNodeColor] = useState<string>('#495057');
 
   // Local editable copy of cavities
   const [cavities, setCavities] = useState<Cavity[]>([]);
@@ -78,6 +81,9 @@ export function PropertiesPanel({
 
       // ground block
       setPosts(typeof d.posts === 'number' ? d.posts : 4);
+
+      // node color
+      setNodeColor((d.headerColor as string) ?? '#495057');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [node?.id]);
@@ -87,6 +93,7 @@ export function PropertiesPanel({
       const d = edge.data as Record<string, unknown> | undefined;
       edgeForm.setValues({
         color: (d?.color as string) ?? '#212529',
+        stripeColor: (d?.stripeColor as string) ?? '',
         gauge: (d?.gauge as string) ?? '20 AWG',
         label: (d?.label as string) ?? '',
       });
@@ -136,10 +143,16 @@ export function PropertiesPanel({
     if (node) onUpdateNode(node.id, { ...node.data, cavities: next });
   }
 
+  function handleNodeColorChange(val: string) {
+    setNodeColor(val);
+    if (node) onUpdateNode(node.id, { ...node.data, headerColor: val });
+  }
+
   function handleConnectorColorChange(val: string) {
     setConnColor(val);
     if (!node) return;
     const headerColor = val === 'gray' ? '#868e96' : '#212529';
+    setNodeColor(headerColor);
     onUpdateNode(node.id, { ...node.data, connectorColor: val, headerColor });
   }
 
@@ -197,6 +210,17 @@ export function PropertiesPanel({
                   Set
                 </Button>
               </Group>
+
+              {/* Node color — available for all cavity and groundBlock nodes */}
+              {isCavityNode && (
+                <ColorInput
+                  label="Node color"
+                  size="xs"
+                  value={nodeColor}
+                  onChange={handleNodeColorChange}
+                  swatches={['#212529','#868e96','#f8f9fa','#1864ab','#1971c2','#2f9e44','#c92a2a','#e67700','#862e9c','#0c8599','#495057','#5c2d91','#e64980','#f59f00','#74c0fc']}
+                />
+              )}
 
               {/* Ground block: posts control */}
               {isGroundBlock && (
@@ -316,10 +340,16 @@ export function PropertiesPanel({
                 <TextInput label="Circuit name" size="xs" placeholder="e.g. IGN_SW" {...edgeForm.getInputProps('label')} />
                 <Select label="Wire gauge" size="xs" data={GAUGES} {...edgeForm.getInputProps('gauge')} />
                 <ColorInput
-                  label="Wire color"
+                  label="Wire color (base)"
                   size="xs"
                   swatches={WIRE_COLORS.map((c) => c.value)}
                   {...edgeForm.getInputProps('color')}
+                />
+                <ColorInput
+                  label="Stripe color (optional)"
+                  size="xs"
+                  swatches={WIRE_COLORS.map((c) => c.value)}
+                  {...edgeForm.getInputProps('stripeColor')}
                 />
                 <Button type="submit" size="xs" mt={4}>Apply</Button>
               </Stack>
