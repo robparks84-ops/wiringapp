@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Modal, TextInput, ScrollArea, Stack, Button, Group, Badge, Text } from '@mantine/core';
 import { IconSearch } from '@tabler/icons-react';
 import { useTelemetry } from '@/contexts/TelemetryContext';
+import { loadMathChannels } from '@/lib/mathChannels';
 import type { WidgetConfig, WidgetType, ColorZone } from '@/lib/types';
 
 const DEFAULT_ZONES: ColorZone[] = [
@@ -33,6 +34,8 @@ export default function ChannelPicker({ onAdd, onClose }: Props) {
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState<WidgetType>('dial');
 
+  const mathChannelNames = new Set(loadMathChannels().map((m) => m.name));
+
   const channelNames = Array.from(channels.keys()).filter((n) =>
     n.toLowerCase().includes(search.toLowerCase()),
   );
@@ -59,6 +62,8 @@ export default function ChannelPicker({ onAdd, onClose }: Props) {
     { type: 'hbar', label: 'H-Bar' },
     { type: 'vbar', label: 'V-Bar' },
     { type: 'linechart', label: 'Chart' },
+    { type: 'gear', label: 'Gear' },
+    { type: 'inputtrace', label: 'Inputs' },
   ];
 
   return (
@@ -119,6 +124,9 @@ export default function ChannelPicker({ onAdd, onClose }: Props) {
                   >
                     <span style={{ fontFamily: 'monospace', fontSize: 14 }}>{name}</span>
                     <Group gap={8}>
+                      {mathChannelNames.has(name) && (
+                        <Badge size="xs" color="violet" variant="filled">math</Badge>
+                      )}
                       <Badge size="sm" color="gray" variant="outline">
                         {ch.value.toFixed(2)} {ch.unit}
                       </Badge>

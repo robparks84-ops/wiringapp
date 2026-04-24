@@ -11,6 +11,7 @@ import {
 import type { Channel, ChannelHistory, Lap, Stream } from '@/lib/types';
 import { getLivestreams, getLaps } from '@/lib/podiumClient';
 import { updateStats, resetStats } from '@/lib/statsAccumulator';
+import { loadMathChannels, evaluateMathChannel } from '@/lib/mathChannels';
 
 const POLL_MS = 500;
 const HISTORY_SECONDS = 300; // 5 minutes of rolling history
@@ -103,6 +104,19 @@ export function TelemetryProvider({
         }
 
         newHistoryEntries.push([ch.name, { timestamp: now, distance: distanceRef.current, value: ch.value }]);
+      }
+
+      // Inject math channels into the channel map
+      const mathChannels = loadMathChannels();
+      for (const mc of mathChannels) {
+        try {
+          const val = evaluateMathChannel(mc.formula, channelMap);
+          channelMap.set(mc.name, { name: mc.name, value: val, unit: mc.unit });
+          updateStats(mc.name, val);
+          newHistoryEntries.push([mc.name, { timestamp: now, distance: distanceRef.current, value: val }]);
+        } catch {
+          // skip invalid formulas
+        }
       }
 
       setChannels(channelMap);

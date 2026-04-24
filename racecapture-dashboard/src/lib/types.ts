@@ -21,7 +21,9 @@ export type WidgetType =
   | 'digital'
   | 'hbar'
   | 'vbar'
-  | 'linechart';
+  | 'linechart'
+  | 'gear'
+  | 'inputtrace';
 
 export interface WidgetConfig {
   id: string;
@@ -32,8 +34,8 @@ export interface WidgetConfig {
   min: number;
   max: number;
   zones: ColorZone[];
-  // For G-force widget, second channel for the Y axis
-  channelNameY?: string;
+  channelNameY?: string; // second axis for gforce / inputtrace
+  channelNameZ?: string; // third axis for inputtrace (steering)
 }
 
 export interface DashboardLayout {
@@ -67,6 +69,15 @@ export interface Lap {
   startTime: string;
   endTime: string;
   uri: string;
+  sectors?: SectorTime[];
+  flagged?: boolean;
+}
+
+export interface SectorTime {
+  sector: number;
+  time: number;
+  isBestOverall: boolean;
+  isBestPersonal: boolean;
 }
 
 export interface Stream {
@@ -99,3 +110,41 @@ export interface AlarmEvent {
   timestamp: number;
   acknowledged: boolean;
 }
+
+export interface MathChannel {
+  id: string;
+  name: string;
+  formula: string; // e.g. "RPM * TPS / 100" — channel names reference live values
+  unit: string;
+  min: number;
+  max: number;
+}
+
+export interface LapNote {
+  lapNumber: number;
+  text: string;
+  timestamp: number;
+}
+
+// Champcar / live timing
+export interface TimingEntry {
+  position: number;
+  carNumber: string;
+  driverName: string;
+  className: string;
+  totalTime: string;
+  lapCount: number;
+  bestLap: string;
+  lastLap: string;
+  gap: string;
+  gapToNext: string;
+  onTrack: boolean;
+}
+
+export interface ChampcarConfig {
+  eventUrl: string;        // Speedhive or Race Monitor event URL
+  myCarNumber: string;     // to highlight own car
+  enabled: boolean;
+}
+
+export type FlagColor = 'green' | 'yellow' | 'red' | 'black' | 'white' | 'checkered' | 'unknown';

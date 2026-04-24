@@ -11,6 +11,8 @@ import DigitalDisplay from './widgets/DigitalDisplay';
 import HorizontalBar from './widgets/HorizontalBar';
 import VerticalBar from './widgets/VerticalBar';
 import LineChart from './widgets/LineChart';
+import GearDisplay from './widgets/GearDisplay';
+import InputTrace from './widgets/InputTrace';
 import WidgetConfigModal from './WidgetConfigModal';
 
 interface Props {
@@ -99,6 +101,28 @@ export default function WidgetCard({ config, onUpdate, onRemove }: Props) {
             showLapOverlay={!!lapHistory}
           />
         );
+      case 'gear': {
+        const rpmCh = channels.get('RPM') ?? channels.get('Rpm') ?? channels.get('rpm');
+        return (
+          <GearDisplay
+            gear={value}
+            rpm={rpmCh?.value ?? 0}
+            rpmMax={config.max || 8000}
+          />
+        );
+      }
+      case 'inputtrace': {
+        const brakeHistory = history.get(config.channelNameY ?? 'Brake') ?? [];
+        const steeringHistory = config.channelNameZ ? history.get(config.channelNameZ) : undefined;
+        return (
+          <InputTrace
+            throttleHistory={channelHistory}
+            brakeHistory={brakeHistory}
+            steeringHistory={steeringHistory}
+            graphByDistance={graphByDistance}
+          />
+        );
+      }
     }
   }
 

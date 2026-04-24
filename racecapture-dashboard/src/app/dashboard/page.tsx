@@ -10,6 +10,7 @@ import {
   ActionIcon,
   Tooltip,
   Switch,
+  Collapse,
 } from '@mantine/core';
 import {
   IconPlus,
@@ -18,6 +19,13 @@ import {
   IconMap,
   IconDownload,
   IconSettings,
+  IconCalculator,
+  IconChevronDown,
+  IconChevronUp,
+  IconFlag,
+  IconClock,
+  IconTrophy,
+  IconBug,
 } from '@tabler/icons-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { TelemetryProvider, useTelemetry } from '@/contexts/TelemetryContext';
@@ -30,6 +38,12 @@ import AlarmBanner from '@/components/AlarmBanner';
 import FuelWidget from '@/components/FuelWidget';
 import LapSelector from '@/components/LapSelector';
 import CriticalAlertOverlay from '@/components/CriticalAlertOverlay';
+import StintPanel from '@/components/StintPanel';
+import FlagDisplay from '@/components/FlagDisplay';
+import ChampcarMap from '@/components/ChampcarMap';
+import SpeedhivePanel from '@/components/SpeedhivePanel';
+import MathChannelEditor from '@/components/MathChannelEditor';
+import SystemStatus from '@/components/SystemStatus';
 
 const STORAGE_KEY = 'rc_dashboard_layouts';
 const DEFAULT_LAYOUT_ID = 'default';
@@ -47,6 +61,48 @@ function saveLayouts(layouts: DashboardLayout[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(layouts));
 }
 
+function Section({
+  label,
+  icon,
+  children,
+  defaultOpen = false,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div style={{ borderTop: '1px solid #1e1e2e' }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '6px 16px',
+          background: 'transparent',
+          border: 'none',
+          color: '#888',
+          cursor: 'pointer',
+          fontSize: 11,
+          letterSpacing: 1,
+          textTransform: 'uppercase',
+        }}
+      >
+        {icon}
+        <span>{label}</span>
+        <span style={{ marginLeft: 'auto' }}>{open ? <IconChevronUp size={12} /> : <IconChevronDown size={12} />}</span>
+      </button>
+      <Collapse in={open}>
+        <div style={{ padding: '0 16px 10px' }}>{children}</div>
+      </Collapse>
+    </div>
+  );
+}
+
 function DashboardContent() {
   const router = useRouter();
   const { token, logout } = useAuth() as { token: string | null; logout: () => void };
@@ -58,7 +114,9 @@ function DashboardContent() {
   const [gridLayout, setGridLayout] = useState<GridItem[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [mathOpen, setMathOpen] = useState(false);
   const [alarmRules] = useState<AlarmRule[]>([]);
+  const [myCarNumber] = useState('');
 
   useEffect(() => {
     if (!token) { router.replace('/'); return; }
@@ -123,12 +181,13 @@ function DashboardContent() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a0f', overflow: 'hidden' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 16px', background: '#0e0e14', borderBottom: '1px solid #1e1e2e', flexShrink: 0, flexWrap: 'wrap' }}>
+      {/* ── Top Header ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '6px 16px', background: '#0e0e14', borderBottom: '1px solid #1e1e2e', flexShrink: 0, flexWrap: 'wrap' }}>
         <div style={{ color: 'white', fontWeight: 700, fontSize: 16, letterSpacing: -0.5 }}>RaceCapture</div>
         <Badge color={connected ? 'green' : 'red'} variant="dot" size="sm">
           {connected ? 'LIVE' : lastError ? 'ERROR' : 'WAITING'}
         </Badge>
+        <FlagDisplay />
         <LapSelector />
         <div style={{ flex: 1 }} />
         <Group gap={6}>
@@ -141,6 +200,11 @@ function DashboardContent() {
           <Tooltip label="Track map">
             <ActionIcon variant={showMap ? 'filled' : 'subtle'} size="sm" onClick={() => setShowMap((s) => !s)} color="teal">
               <IconMap size={14} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Math channels">
+            <ActionIcon variant="subtle" size="sm" onClick={() => setMathOpen(true)} color="violet">
+              <IconCalculator size={14} />
             </ActionIcon>
           </Tooltip>
           <Tooltip label="Reset stats">
@@ -174,39 +238,62 @@ function DashboardContent() {
         </Group>
       </div>
 
-      {/* Delta timer */}
-      <div style={{ padding: '6px 16px', flexShrink: 0 }}>
+      {/* ── Stint / session bar ── */}
+      <div style={{ padding: '4px 16px', flexShrink: 0, background: '#0e0e14', borderBottom: '1px solid #1a1a28' }}>
+        <StintPanel />
+      </div>
+
+      {/* ── Delta timer ── */}
+      <div style={{ padding: '4px 16px', flexShrink: 0 }}>
         <DeltaTimer />
       </div>
 
-      {/* Main scrollable area */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '0 16px 16px' }}>
+      {/* ── Main scrollable area ── */}
+      <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
         {showMap && (
-          <div style={{ height: 260, marginBottom: 10, borderRadius: 12, overflow: 'hidden', border: '1px solid #222' }}>
+          <div style={{ height: 260, margin: '0 16px 10px', borderRadius: 12, overflow: 'hidden', border: '1px solid #222', flexShrink: 0 }}>
             <TrackMap />
           </div>
         )}
-        <DashboardGrid widgets={widgets} layout={gridLayout} onWidgetsChange={handleWidgetsChange} onLayoutChange={handleLayoutChange} />
-        {widgets.length === 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 300, gap: 12 }}>
-            <div style={{ fontSize: 48 }}>📡</div>
-            <div style={{ fontSize: 18, color: '#555' }}>No widgets yet</div>
-            <div style={{ fontSize: 13, color: '#444' }}>
-              {connected ? 'Click "Add Widget" to build your dashboard' : 'Start your RaceCapture session, then add widgets'}
-            </div>
-            <Button size="sm" leftSection={<IconPlus size={14} />} onClick={() => setPickerOpen(true)} variant="subtle">
-              Add your first widget
-            </Button>
-          </div>
-        )}
-      </div>
 
-      {/* Fuel bar */}
-      <div style={{ padding: '6px 16px', borderTop: '1px solid #1e1e2e', flexShrink: 0 }}>
-        <FuelWidget />
+        {/* Widget grid */}
+        <div style={{ padding: '0 16px 8px', flex: 1 }}>
+          <DashboardGrid widgets={widgets} layout={gridLayout} onWidgetsChange={handleWidgetsChange} onLayoutChange={handleLayoutChange} />
+          {widgets.length === 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 260, gap: 12 }}>
+              <div style={{ fontSize: 48 }}>📡</div>
+              <div style={{ fontSize: 18, color: '#555' }}>No widgets yet</div>
+              <div style={{ fontSize: 13, color: '#444' }}>
+                {connected ? 'Click "Add Widget" to build your dashboard' : 'Start your RaceCapture session, then add widgets'}
+              </div>
+              <Button size="sm" leftSection={<IconPlus size={14} />} onClick={() => setPickerOpen(true)} variant="subtle">
+                Add your first widget
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Collapsible info panels ── */}
+        <Section label="Champcar Marching Ants" icon={<IconFlag size={12} />}>
+          <ChampcarMap myCarNumber={myCarNumber} />
+        </Section>
+
+        <Section label="Speedhive Live Timing" icon={<IconTrophy size={12} />}>
+          <SpeedhivePanel myCarNumber={myCarNumber} />
+        </Section>
+
+        <Section label="System Status" icon={<IconBug size={12} />}>
+          <SystemStatus />
+        </Section>
+
+        {/* ── Fuel bar ── */}
+        <div style={{ padding: '6px 16px', borderTop: '1px solid #1e1e2e', flexShrink: 0 }}>
+          <FuelWidget />
+        </div>
       </div>
 
       {pickerOpen && <ChannelPicker onAdd={handleAddWidget} onClose={() => setPickerOpen(false)} />}
+      {mathOpen && <MathChannelEditor onClose={() => setMathOpen(false)} />}
       <AlarmBanner rules={alarmRules} />
       <CriticalAlertOverlay widgets={widgets} />
     </div>
