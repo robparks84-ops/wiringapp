@@ -13,13 +13,13 @@ interface ActiveAlert {
   color: string;
   label: string;
   unit: string;
+  isDanger: boolean;
 }
 
 interface Props {
   widgets: WidgetConfig[];
 }
 
-// Returns the zone color for a value — last zone whose upTo >= value
 function getZoneColor(value: number, zones: WidgetConfig['zones']): { color: string; zoneIndex: number } {
   for (let i = 0; i < zones.length; i++) {
     if (value <= zones[i].upTo) return { color: zones[i].color, zoneIndex: i };
@@ -27,17 +27,14 @@ function getZoneColor(value: number, zones: WidgetConfig['zones']): { color: str
   return { color: zones[zones.length - 1]?.color ?? '#e03131', zoneIndex: zones.length - 1 };
 }
 
-const DANGER_COLORS = new Set(['#e03131', '#c92a2a', '#f03e3e', '#ff0000', '#cc0000']);
-const WARNING_COLORS = new Set(['#f76707', '#e8590c', '#fd7e14', '#ff6b35']);
-
 function isCritical(color: string): boolean {
-  const normalized = color.toLowerCase();
-  return DANGER_COLORS.has(normalized) || normalized.includes('e031') || normalized.includes('c92a') || normalized.includes('f03e');
+  const c = color.toLowerCase();
+  return c.includes('e031') || c.includes('c92a') || c.includes('f03e') || c === '#ff0000' || c === '#cc0000';
 }
 
 function isWarning(color: string): boolean {
-  const normalized = color.toLowerCase();
-  return WARNING_COLORS.has(normalized) || normalized.includes('f767') || normalized.includes('e859') || normalized.includes('fd7e');
+  const c = color.toLowerCase();
+  return c.includes('f767') || c.includes('e859') || c.includes('fd7e') || c.includes('f76b');
 }
 
 export default function CriticalAlertOverlay({ widgets }: Props) {
@@ -65,9 +62,7 @@ export default function CriticalAlertOverlay({ widgets }: Props) {
         osc.start(t);
         osc.stop(t + 0.12);
       });
-    } catch {
-      // audio not available
-    }
+    } catch { /* audio not available */ }
   }, []);
 
   useEffect(() => {
@@ -81,23 +76,19 @@ export default function CriticalAlertOverlay({ widgets }: Props) {
       const { color, zoneIndex } = getZoneColor(ch.value, widget.zones);
       const prevZone = previousZonesRef.current.get(widget.channelName) ?? -1;
 
-      // Entered a critical or warning zone
       if ((isCritical(color) || isWarning(color)) && zoneIndex !== prevZone) {
-        // Find the threshold that was crossed
-        const crossedZone = widget.zones[zoneIndex];
         const prevZoneData = zoneIndex > 0 ? widget.zones[zoneIndex - 1] : null;
         const threshold = prevZoneData ? prevZoneData.upTo : widget.min;
-        const condition = ch.value > threshold ? 'above' : 'below';
-
         newAlerts.push({
           id: `${widget.id}-${zoneIndex}`,
           channelName: widget.channelName,
           value: ch.value,
           threshold,
-          condition,
+          condition: ch.value > threshold ? 'above' : 'below',
           color,
           label: widget.label,
           unit: widget.unit,
+          isDanger: isCritical(color),
         });
       }
 
@@ -114,33 +105,33 @@ export default function CriticalAlertOverlay({ widgets }: Props) {
       playAlarmTone();
     }
 
-    // Remove alerts whose channel is back in a safe zone
+    // Remove alerts whose channel returned to a safe zone
     setAlerts((prev) =>
       prev.filter((alert) => {
         const ch = channels.get(alert.channelName);
         if (!ch) return true;
-        const { color } = getZoneColor(ch.value, widgets.find((w) => w.channelName === alert.channelName)?.zones ?? []);
+        const widget = widgets.find((w) => w.channelName === alert.channelName);
+        if (!widget) return false;
+        const { color } = getZoneColor(ch.value, widget.zones);
         return isCritical(color) || isWarning(color);
       }),
     );
   }, [channels, widgets, playAlarmTone]);
 
-  // Repeat alarm tone every 3 seconds while active
+  // Repeat alarm tone every 3 seconds while active and not dismissed
   useEffect(() => {
     if (alerts.length > 0 && !dismissed) {
       alarmIntervalRef.current = setInterval(playAlarmTone, 3000);
     } else {
       if (alarmIntervalRef.current) clearInterval(alarmIntervalRef.current);
     }
-    return () => {
-      if (alarmIntervalRef.current) clearInterval(alarmIntervalRef.current);
-    };
+    return () => { if (alarmIntervalRef.current) clearInterval(alarmIntervalRef.current); };
   }, [alerts.length, dismissed, playAlarmTone]);
 
   if (alerts.length === 0 || dismissed) return null;
 
-  const primaryAlert = alerts[0];
-  const isDanger = isCritical(primaryAlert.color);
+  // Worst severity drives the background color
+  const anyDanger = alerts.some((a) => a.isDanger);
 
   return (
     <div
@@ -154,137 +145,120 @@ export default function CriticalAlertOverlay({ widgets }: Props) {
         alignItems: 'center',
         justifyContent: 'center',
         cursor: 'pointer',
+        padding: '24px 16px',
         animation: 'flashBg 0.5s ease-in-out infinite alternate',
-        background: isDanger ? 'rgba(180, 0, 0, 0.92)' : 'rgba(180, 90, 0, 0.92)',
+        background: anyDanger ? 'rgba(180,0,0,0.93)' : 'rgba(170,80,0,0.93)',
+        overflowY: 'auto',
       }}
     >
       {/* Flashing border */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          border: `12px solid ${isDanger ? '#ff0000' : '#ff8c00'}`,
-          animation: 'flashBorder 0.4s ease-in-out infinite alternate',
-          pointerEvents: 'none',
-        }}
-      />
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        border: `12px solid ${anyDanger ? '#ff0000' : '#ff8c00'}`,
+        animation: 'flashBorder 0.4s ease-in-out infinite alternate',
+        pointerEvents: 'none',
+      }} />
 
-      {/* Warning icon */}
-      <div
-        style={{
-          fontSize: 'clamp(60px, 12vw, 120px)',
-          animation: 'pulse 0.5s ease-in-out infinite alternate',
-          marginBottom: 16,
-        }}
-      >
+      {/* Icon + heading */}
+      <div style={{ fontSize: 'clamp(48px, 8vw, 90px)', animation: 'pulse 0.5s ease-in-out infinite alternate', marginBottom: 8 }}>
         ⚠️
       </div>
-
-      {/* Channel name */}
-      <div
-        style={{
-          fontSize: 'clamp(20px, 5vw, 48px)',
-          color: 'white',
-          fontWeight: 900,
-          letterSpacing: 4,
-          textTransform: 'uppercase',
-          textShadow: '0 0 30px rgba(255,255,255,0.8)',
-          marginBottom: 8,
-        }}
-      >
-        {primaryAlert.label}
+      <div style={{
+        fontSize: 'clamp(18px, 4vw, 40px)',
+        color: 'white',
+        fontWeight: 900,
+        letterSpacing: 6,
+        textTransform: 'uppercase',
+        textShadow: '0 0 30px rgba(255,255,255,0.7)',
+        marginBottom: 24,
+      }}>
+        {alerts.length === 1 ? 'ALERT' : `${alerts.length} ALERTS`}
       </div>
 
-      {/* Value */}
-      <div
-        style={{
-          fontSize: 'clamp(48px, 14vw, 140px)',
-          color: 'white',
-          fontFamily: 'monospace',
-          fontWeight: 900,
-          lineHeight: 1,
-          textShadow: '0 0 60px rgba(255,255,255,0.9)',
-          animation: 'pulse 0.5s ease-in-out infinite alternate',
-          marginBottom: 8,
-        }}
-      >
-        {primaryAlert.value.toFixed(1)}
-        <span style={{ fontSize: '0.35em', opacity: 0.8, marginLeft: 8 }}>{primaryAlert.unit}</span>
-      </div>
-
-      {/* Message */}
-      <div
-        style={{
-          fontSize: 'clamp(16px, 3vw, 32px)',
-          color: 'rgba(255,255,255,0.9)',
-          fontWeight: 700,
-          textAlign: 'center',
-          marginBottom: 32,
-        }}
-      >
-        {primaryAlert.condition === 'above' ? 'EXCEEDS' : 'BELOW'} THRESHOLD of{' '}
-        {primaryAlert.threshold.toFixed(1)} {primaryAlert.unit}
-      </div>
-
-      {/* Additional alerts */}
-      {alerts.length > 1 && (
-        <div
-          style={{
-            display: 'flex',
-            gap: 12,
-            marginBottom: 32,
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-          }}
-        >
-          {alerts.slice(1).map((a) => (
-            <div
-              key={a.id}
-              style={{
-                background: 'rgba(0,0,0,0.4)',
-                border: '2px solid rgba(255,255,255,0.5)',
-                borderRadius: 8,
-                padding: '6px 14px',
-                color: 'white',
-                fontSize: 'clamp(12px, 2vw, 18px)',
-                fontWeight: 700,
-              }}
-            >
-              {a.label}: {a.value.toFixed(1)} {a.unit}
+      {/* All alerts listed equally */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+        width: '100%',
+        maxWidth: 680,
+        marginBottom: 28,
+      }}>
+        {alerts.map((alert) => (
+          <div
+            key={alert.id}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr auto auto',
+              alignItems: 'center',
+              gap: 16,
+              background: alert.isDanger ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.30)',
+              border: `3px solid ${alert.isDanger ? 'rgba(255,80,80,0.7)' : 'rgba(255,160,40,0.7)'}`,
+              borderRadius: 12,
+              padding: '14px 20px',
+            }}
+          >
+            {/* Label + threshold message */}
+            <div>
+              <div style={{ color: 'white', fontSize: 'clamp(15px, 2.5vw, 24px)', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase' }}>
+                {alert.label}
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 'clamp(11px, 1.5vw, 15px)', marginTop: 2 }}>
+                {alert.condition === 'above' ? '▲ exceeds' : '▼ below'} {alert.threshold.toFixed(1)} {alert.unit}
+              </div>
             </div>
-          ))}
-        </div>
-      )}
 
-      {/* Dismiss instruction */}
-      <div
-        style={{
-          fontSize: 'clamp(12px, 1.5vw, 18px)',
-          color: 'rgba(255,255,255,0.6)',
-          letterSpacing: 2,
-          animation: 'fadeInOut 1.5s ease-in-out infinite',
-        }}
-      >
+            {/* Severity badge */}
+            <div style={{
+              background: alert.isDanger ? '#e03131' : '#f76707',
+              color: 'white',
+              fontSize: 'clamp(9px, 1.2vw, 12px)',
+              fontWeight: 700,
+              letterSpacing: 1,
+              borderRadius: 4,
+              padding: '3px 8px',
+              textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+            }}>
+              {alert.isDanger ? 'DANGER' : 'WARNING'}
+            </div>
+
+            {/* Current value */}
+            <div style={{
+              color: alert.color,
+              fontSize: 'clamp(22px, 4vw, 44px)',
+              fontFamily: 'monospace',
+              fontWeight: 900,
+              textShadow: `0 0 20px ${alert.color}99`,
+              textAlign: 'right',
+              whiteSpace: 'nowrap',
+            }}>
+              {alert.value.toFixed(1)}
+              <span style={{ fontSize: '0.45em', color: 'rgba(255,255,255,0.6)', marginLeft: 4 }}>{alert.unit}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Dismiss */}
+      <div style={{
+        fontSize: 'clamp(11px, 1.5vw, 16px)',
+        color: 'rgba(255,255,255,0.55)',
+        letterSpacing: 2,
+        animation: 'fadeInOut 1.5s ease-in-out infinite',
+      }}>
         TAP ANYWHERE TO DISMISS
       </div>
 
       <style>{`
         @keyframes flashBg {
-          from { background-color: ${isDanger ? 'rgba(180,0,0,0.92)' : 'rgba(180,90,0,0.92)'}; }
-          to   { background-color: ${isDanger ? 'rgba(255,0,0,0.96)' : 'rgba(255,120,0,0.96)'}; }
+          from { background-color: ${anyDanger ? 'rgba(180,0,0,0.93)' : 'rgba(170,80,0,0.93)'}; }
+          to   { background-color: ${anyDanger ? 'rgba(230,0,0,0.97)' : 'rgba(220,110,0,0.97)'}; }
         }
-        @keyframes flashBorder {
-          from { opacity: 1; }
-          to   { opacity: 0.3; }
-        }
-        @keyframes pulse {
-          from { transform: scale(1); }
-          to   { transform: scale(1.05); }
-        }
-        @keyframes fadeInOut {
-          0%,100% { opacity: 0.4; }
-          50%     { opacity: 1; }
-        }
+        @keyframes flashBorder { from { opacity:1; } to { opacity:0.25; } }
+        @keyframes pulse { from { transform:scale(1); } to { transform:scale(1.08); } }
+        @keyframes fadeInOut { 0%,100% { opacity:0.4; } 50% { opacity:1; } }
       `}</style>
     </div>
   );
