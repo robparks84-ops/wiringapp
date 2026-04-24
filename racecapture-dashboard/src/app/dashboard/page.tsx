@@ -29,6 +29,7 @@ import TrackMap from '@/components/TrackMap';
 import AlarmBanner from '@/components/AlarmBanner';
 import FuelWidget from '@/components/FuelWidget';
 import LapSelector from '@/components/LapSelector';
+import CriticalAlertOverlay from '@/components/CriticalAlertOverlay';
 
 const STORAGE_KEY = 'rc_dashboard_layouts';
 const DEFAULT_LAYOUT_ID = 'default';
@@ -48,7 +49,7 @@ function saveLayouts(layouts: DashboardLayout[]) {
 
 function DashboardContent() {
   const router = useRouter();
-  const { token, logout } = useAuth();
+  const { token, logout } = useAuth() as { token: string | null; logout: () => void };
   const { connected, lastError, graphByDistance, setGraphByDistance, resetSessionStats } = useTelemetry();
 
   const [layouts, setLayouts] = useState<DashboardLayout[]>([]);
@@ -207,6 +208,7 @@ function DashboardContent() {
 
       {pickerOpen && <ChannelPicker onAdd={handleAddWidget} onClose={() => setPickerOpen(false)} />}
       <AlarmBanner rules={alarmRules} />
+      <CriticalAlertOverlay widgets={widgets} />
     </div>
   );
 }

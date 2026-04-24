@@ -4,50 +4,48 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 
 interface AuthState {
   token: string | null;
-  clientId: string;
-  clientSecret: string;
-  login: (token: string, clientId: string, clientSecret: string) => void;
+  savedEmail: string;
+  login: (token: string) => void;
+  saveEmail: (email: string) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthState>({
   token: null,
-  clientId: '',
-  clientSecret: '',
+  savedEmail: '',
   login: () => {},
+  saveEmail: () => {},
   logout: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
-  const [clientId, setClientId] = useState('');
-  const [clientSecret, setClientSecret] = useState('');
+  const [savedEmail, setSavedEmail] = useState('parksrob@hotmail.com');
 
   useEffect(() => {
-    const stored = localStorage.getItem('podium_token');
-    const storedId = localStorage.getItem('podium_client_id') ?? '';
-    const storedSecret = localStorage.getItem('podium_client_secret') ?? '';
+    const stored = localStorage.getItem('podium_session');
+    const email = localStorage.getItem('podium_email') ?? 'parksrob@hotmail.com';
     if (stored) setToken(stored);
-    setClientId(storedId);
-    setClientSecret(storedSecret);
+    setSavedEmail(email);
   }, []);
 
-  const login = useCallback((t: string, id: string, secret: string) => {
-    localStorage.setItem('podium_token', t);
-    localStorage.setItem('podium_client_id', id);
-    localStorage.setItem('podium_client_secret', secret);
+  const login = useCallback((t: string) => {
+    localStorage.setItem('podium_session', t);
     setToken(t);
-    setClientId(id);
-    setClientSecret(secret);
+  }, []);
+
+  const saveEmail = useCallback((email: string) => {
+    localStorage.setItem('podium_email', email);
+    setSavedEmail(email);
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('podium_token');
+    localStorage.removeItem('podium_session');
     setToken(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ token, clientId, clientSecret, login, logout }}>
+    <AuthContext.Provider value={{ token, savedEmail, login, saveEmail, logout }}>
       {children}
     </AuthContext.Provider>
   );

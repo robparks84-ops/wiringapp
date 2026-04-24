@@ -7,26 +7,25 @@ import {
   PasswordInput,
   Button,
   Stack,
-  Text,
   Alert,
-  Anchor,
-  Collapse,
   Paper,
+  Text,
 } from '@mantine/core';
-import { IconAlertCircle, IconChevronDown } from '@tabler/icons-react';
+import { IconAlertCircle } from '@tabler/icons-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { login as podiumLogin } from '@/lib/podiumClient';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { token, login } = useAuth();
-  const [username, setUsername] = useState('');
+  const { token, savedEmail, login, saveEmail } = useAuth();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [clientId, setClientId] = useState('');
-  const [clientSecret, setClientSecret] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (savedEmail) setEmail(savedEmail);
+  }, [savedEmail]);
 
   useEffect(() => {
     if (token) router.replace('/dashboard');
@@ -34,19 +33,15 @@ export default function LoginPage() {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (!clientId || !clientSecret) {
-      setError('Client ID and Client Secret are required. See the advanced section below.');
-      setShowAdvanced(true);
-      return;
-    }
     setLoading(true);
     setError('');
     try {
-      const accessToken = await podiumLogin(username, password, clientId, clientSecret);
-      login(accessToken, clientId, clientSecret);
+      const session = await podiumLogin(email, password);
+      login(session);
+      saveEmail(email);
       router.replace('/dashboard');
     } catch (err) {
-      setError(String(err));
+      setError(String(err).replace('Error: ', ''));
     } finally {
       setLoading(false);
     }
@@ -67,68 +62,34 @@ export default function LoginPage() {
         shadow="lg"
         p="xl"
         radius="md"
-        style={{ width: '100%', maxWidth: 420, background: '#12121a', border: '1px solid #222' }}
+        style={{ width: '100%', maxWidth: 380, background: '#12121a', border: '1px solid #222' }}
       >
         <Stack gap="md">
-          <div style={{ textAlign: 'center' }}>
+          <div style={{ textAlign: 'center', marginBottom: 8 }}>
             <div style={{ fontSize: 28, fontWeight: 700, color: 'white', letterSpacing: -1 }}>
               RaceCapture
             </div>
-            <div style={{ fontSize: 14, color: '#666' }}>Live Telemetry Dashboard</div>
+            <div style={{ fontSize: 13, color: '#555' }}>Live Telemetry Dashboard</div>
           </div>
 
           <form onSubmit={handleLogin}>
             <Stack gap="sm">
               <TextInput
-                label="podium.live username"
-                placeholder="your@email.com"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                label="podium.live email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
+                autoComplete="email"
               />
               <PasswordInput
                 label="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                autoFocus={!!email}
+                autoComplete="current-password"
               />
-
-              <Anchor
-                size="sm"
-                c="dimmed"
-                onClick={() => setShowAdvanced((s) => !s)}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
-              >
-                API credentials
-                <IconChevronDown
-                  size={14}
-                  style={{ transform: showAdvanced ? 'rotate(180deg)' : 'none', transition: '0.2s' }}
-                />
-              </Anchor>
-
-              <Collapse in={showAdvanced}>
-                <Stack gap="sm">
-                  <Alert color="blue" variant="light" style={{ fontSize: 12 }}>
-                    Register an API application at{' '}
-                    <Anchor href="https://podium.live" target="_blank" size="xs">
-                      podium.live
-                    </Anchor>{' '}
-                    to obtain a Client ID and Client Secret.
-                  </Alert>
-                  <TextInput
-                    label="Client ID"
-                    value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
-                    placeholder="your-client-id"
-                  />
-                  <PasswordInput
-                    label="Client Secret"
-                    value={clientSecret}
-                    onChange={(e) => setClientSecret(e.target.value)}
-                    placeholder="your-client-secret"
-                  />
-                </Stack>
-              </Collapse>
 
               {error && (
                 <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light">
@@ -136,14 +97,14 @@ export default function LoginPage() {
                 </Alert>
               )}
 
-              <Button type="submit" loading={loading} fullWidth mt="xs">
+              <Button type="submit" loading={loading} fullWidth mt={4}>
                 Sign in
               </Button>
             </Stack>
           </form>
 
           <Text size="xs" c="dimmed" ta="center">
-            Your credentials are stored locally and never sent anywhere except podium.live.
+            Uses your podium.live account — no extra setup needed.
           </Text>
         </Stack>
       </Paper>

@@ -27,20 +27,30 @@ async function proxy(
   const search = req.nextUrl.search;
   const url = `${PODIUM_BASE}${podiumPath}${search}`;
 
-  const token = req.headers.get('x-podium-token');
+  const sessionCookie = req.headers.get('x-podium-session');
+  const bearerToken = req.headers.get('x-podium-token');
   const contentType = req.headers.get('content-type') ?? 'application/json';
 
   const headers: Record<string, string> = {
-    Accept: 'application/json',
+    Accept: 'application/json, text/html',
     'Content-Type': contentType,
+    'User-Agent': 'RaceCapture-Dashboard/1.0',
   };
 
-  // Pass auth header from client, or Bearer token from x-podium-token
+  // Session cookie auth (no client credentials needed)
+  if (sessionCookie) {
+    headers['Cookie'] = sessionCookie;
+  }
+
+  // OAuth Bearer token auth (fallback)
+  if (bearerToken) {
+    headers['Authorization'] = `Bearer ${bearerToken}`;
+  }
+
+  // Pass through explicit Authorization header (e.g. Basic for OAuth token exchange)
   const authHeader = req.headers.get('authorization');
   if (authHeader) {
     headers['Authorization'] = authHeader;
-  } else if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
   }
 
   let body: string | undefined;
@@ -49,11 +59,31 @@ async function proxy(
   }
 
   try {
-    const res = await fetch(url, { method, headers, body });
+    const res = await fetch(url, {
+      method,
+      headers,
+      body,
+      redirect: 'manual', // capture Set-Cookie before any redirect
+    });
+
     const text = await res.text();
+    const responseHeaders: Record<string, string> = {
+      'Content-Type': res.headers.get('content-type') ?? 'application/json',
+    };
+
+    // On login success, forward the session cookie so the client can store it
+    const setCookie = res.headers.get('set-cookie');
+    if (setCookie) {
+      // Extract the session token value — podium.live uses _podium_live_session or similar
+      const sessionMatch = setCookie.match(/([a-zA-Z0-9_]+session[a-zA-Z0-9_]*)=([^;]+)/i);
+      if (sessionMatch) {
+        responseHeaders['x-podium-set-session'] = `${sessionMatch[1]}=${sessionMatch[2]}`;
+      }
+    }
+
     return new NextResponse(text, {
       status: res.status,
-      headers: { 'Content-Type': 'application/json' },
+      headers: responseHeaders,
     });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 502 });
