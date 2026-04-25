@@ -2,9 +2,9 @@
 
 import { Select, Group, Button, Badge } from '@mantine/core';
 import { useTelemetry } from '@/contexts/TelemetryContext';
-import type { Lap } from '@/lib/types';
 
-function formatLapTime(s: number) {
+function formatLapTime(s: number | null) {
+  if (s == null || s <= 0) return '--:--.---';
   const m = Math.floor(s / 60);
   const sec = (s % 60).toFixed(3);
   return `${m}:${sec.padStart(6, '0')}`;
@@ -15,7 +15,10 @@ export default function LapSelector() {
 
   if (laps.length === 0) return null;
 
-  const best = laps.reduce((b, l) => (l.lapTime < b.lapTime ? l : b), laps[0]);
+  const timedLaps = laps.filter((l) => l.lapTime != null && l.lapTime > 0);
+  const best = timedLaps.length > 0
+    ? timedLaps.reduce((b, l) => ((l.lapTime ?? Infinity) < (b.lapTime ?? Infinity) ? l : b), timedLaps[0])
+    : null;
 
   return (
     <Group gap={8}>
@@ -39,7 +42,7 @@ export default function LapSelector() {
           .filter((l) => l.id != null)
           .map((l) => ({
             value: String(l.id),
-            label: `Lap ${l.lapNumber}  ${formatLapTime(l.lapTime)}${l.id === best.id ? ' ★' : ''}`,
+            label: `Lap ${l.lapNumber}  ${formatLapTime(l.lapTime)}${best && l.id === best.id ? ' ★' : ''}`,
           }))}
         style={{ width: 200 }}
         clearable

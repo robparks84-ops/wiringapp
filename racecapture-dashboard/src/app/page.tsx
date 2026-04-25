@@ -36,8 +36,8 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      const session = await podiumLogin(email, password);
-      login(session);
+      const accessToken = await podiumLogin(email, password);
+      login(accessToken);
       saveEmail(email);
       router.replace('/dashboard');
     } catch (err) {

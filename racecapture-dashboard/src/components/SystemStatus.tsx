@@ -26,7 +26,6 @@ export default function SystemStatus() {
     channels.forEach((ch, name) => {
       const times = updateTimestamps.current.get(name) ?? [];
       times.push(now);
-      // Keep last 10 timestamps for Hz calculation
       if (times.length > 10) times.shift();
       updateTimestamps.current.set(name, times);
     });
@@ -55,7 +54,8 @@ export default function SystemStatus() {
     setHealth(entries);
   }, [channels]);
 
-  const gps = channels.get('GPSQuality') ?? channels.get('GPS_Quality') ?? channels.get('gpsquality');
+  const gps = channels.get('GPSQual') ?? channels.get('GPSQuality') ?? channels.get('GPS_Quality') ?? channels.get('gpsquality');
+  const gpsSats = channels.get('GPSSats');
   const logging = channels.get('Logging') ?? channels.get('logging');
   const frozen = health.filter((h) => h.status === 'frozen').length;
   const slow = health.filter((h) => h.status === 'slow').length;
@@ -73,9 +73,9 @@ export default function SystemStatus() {
         </div>
         {streams.length > 1 && (
           <select
-            value={activeStream?.device_serial ?? ''}
+            value={activeStream?.device_id ?? ''}
             onChange={(e) => {
-              const s = streams.find((s) => s.device_serial === e.target.value) ?? null;
+              const s = streams.find((s) => String(s.device_id) === e.target.value) ?? null;
               setActiveStream(s);
             }}
             style={{
@@ -84,13 +84,18 @@ export default function SystemStatus() {
             }}
           >
             {streams.map((s) => (
-              <option key={s.device_serial} value={s.device_serial}>{s.device_name}</option>
+              <option key={s.device_id} value={s.device_id}>{s.device_name}</option>
             ))}
           </select>
         )}
-        {gps && (
+        {gpsSats && (
           <div style={{ color: '#aaa', fontSize: 12 }}>
-            GPS: <span style={{ color: gps.value > 3 ? '#2f9e44' : gps.value > 1 ? '#f59f00' : '#e03131' }}>{gps.value.toFixed(0)} sats</span>
+            GPS: <span style={{ color: gpsSats.value > 10 ? '#2f9e44' : gpsSats.value > 5 ? '#f59f00' : '#e03131' }}>{gpsSats.value.toFixed(0)} sats</span>
+          </div>
+        )}
+        {gps && !gpsSats && (
+          <div style={{ color: '#aaa', fontSize: 12 }}>
+            GPS Quality: <span style={{ color: gps.value >= 2 ? '#2f9e44' : gps.value >= 1 ? '#f59f00' : '#e03131' }}>{gps.value.toFixed(0)}</span>
           </div>
         )}
         {logging && (
@@ -110,7 +115,7 @@ export default function SystemStatus() {
         )}
       </div>
 
-      {/* Channel health grid (shows troubled channels first) */}
+      {/* Channel health grid */}
       {health.filter((h) => h.status !== 'ok').length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
           {health.filter((h) => h.status !== 'ok').map((ch) => (

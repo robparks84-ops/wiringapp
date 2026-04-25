@@ -20,17 +20,17 @@ const AuthContext = createContext<AuthState>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
-  const [savedEmail, setSavedEmail] = useState('parksrob@hotmail.com');
+  const [savedEmail, setSavedEmail] = useState('');
 
   useEffect(() => {
-    const stored = localStorage.getItem('podium_session');
-    const email = localStorage.getItem('podium_email') ?? 'parksrob@hotmail.com';
+    const stored = localStorage.getItem('podium_token');
+    const email = localStorage.getItem('podium_email') ?? '';
     if (stored) setToken(stored);
     setSavedEmail(email);
   }, []);
 
   const login = useCallback((t: string) => {
-    localStorage.setItem('podium_session', t);
+    localStorage.setItem('podium_token', t);
     setToken(t);
   }, []);
 
@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('podium_session');
+    localStorage.removeItem('podium_token');
     setToken(null);
   }, []);
 

@@ -2,6 +2,9 @@ export interface Channel {
   name: string;
   value: number;
   unit: string;
+  min?: number;
+  max?: number;
+  precision?: number;
 }
 
 export interface ChannelHistory {
@@ -34,8 +37,8 @@ export interface WidgetConfig {
   min: number;
   max: number;
   zones: ColorZone[];
-  channelNameY?: string; // second axis for gforce / inputtrace
-  channelNameZ?: string; // third axis for inputtrace (steering)
+  channelNameY?: string;
+  channelNameZ?: string;
 }
 
 export interface DashboardLayout {
@@ -65,12 +68,18 @@ export interface ChannelStats {
 export interface Lap {
   id: string;
   lapNumber: number;
-  lapTime: number;
-  startTime: string;
-  endTime: string;
-  uri: string;
-  sectors?: SectorTime[];
-  flagged?: boolean;
+  lapTime: number | null;
+  URI: string;
+  raw_data_uri?: string;
+  end_time?: string;
+  aggregates?: LapAggregate[];
+}
+
+export interface LapAggregate {
+  name: string;
+  min?: number;
+  max?: number;
+  average?: number;
 }
 
 export interface SectorTime {
@@ -80,14 +89,48 @@ export interface SectorTime {
   isBestPersonal: boolean;
 }
 
+/** An eventdevice from the Podium API */
+export interface PodiumEventDevice {
+  id: number;
+  URI: string;
+  device_uri: string;
+  device_id: number;
+  event_uri: string;
+  event_id: number;
+  laps_uri: string;
+  alertmessages_uri?: string;
+  user_uri?: string;
+  name: string;
+  comp_number?: string | null;
+  source?: string;
+  source_ver?: string;
+  private?: boolean;
+  avatar_url?: string;
+  user_avatar_url?: string;
+  title?: string;
+  lap_count?: number;
+  channels: PodiumChannel[];
+}
+
+export interface PodiumChannel {
+  name: string;
+  units: string | null;
+  min: number | null;
+  max: number | null;
+  precision: number | null;
+}
+
 export interface Stream {
-  device_serial: string;
+  /** eventdevice id */
+  eventdevice_id: number;
+  /** device id (used for telemetry WS) */
+  device_id: number;
   device_name: string;
   eventdevice_name: string;
   eventdevice_uri: string;
   device_uri: string;
   event_uri: string;
-  laps_uri?: string;
+  laps_uri: string;
   channels: Channel[];
 }
 
@@ -115,7 +158,7 @@ export interface AlarmEvent {
 export interface MathChannel {
   id: string;
   name: string;
-  formula: string; // e.g. "RPM * TPS / 100" — channel names reference live values
+  formula: string;
   unit: string;
   min: number;
   max: number;
@@ -127,7 +170,6 @@ export interface LapNote {
   timestamp: number;
 }
 
-// Champcar / live timing
 export interface TimingEntry {
   position: number;
   carNumber: string;
@@ -143,8 +185,8 @@ export interface TimingEntry {
 }
 
 export interface ChampcarConfig {
-  eventUrl: string;        // Speedhive or Race Monitor event URL
-  myCarNumber: string;     // to highlight own car
+  eventUrl: string;
+  myCarNumber: string;
   enabled: boolean;
 }
 

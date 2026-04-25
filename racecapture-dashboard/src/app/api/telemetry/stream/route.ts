@@ -8,25 +8,26 @@ function sse(event: string, data: string): Uint8Array {
   return encoder.encode(`event: ${event}\ndata: ${data}\n\n`);
 }
 
-// Build index→name lookup from sensor map { ChannelName: index | [lat,lon] }
-function buildIndexMap(sensorMap: Record<string, number | number[]>): Map<number, string> {
+/**
+ * Build a lookup from array index → channel name.
+ * channelNames is the ordered list of channel names from the eventdevice.
+ */
+function buildIndexMap(channelNames: string[]): Map<number, string> {
   const map = new Map<number, string>();
-  for (const [name, idx] of Object.entries(sensorMap)) {
-    if (typeof idx === 'number') {
-      map.set(idx, name);
-    } else if (Array.isArray(idx) && idx.length >= 1) {
-      // Position = [latIdx, lonIdx] — map both to Lat/Lon sub-channels
-      map.set(idx[0], `${name}Lat`);
-      if (idx[1] !== undefined) map.set(idx[1], `${name}Lon`);
-    }
+  for (let i = 0; i < channelNames.length; i++) {
+    map.set(i, channelNames[i]);
   }
   return map;
 }
 
+/**
+ * Decode a telemetry frame from the WebSocket.
+ * RaceCapture sends JSON like: {"s":{"d":[...]}} or {"d":[...]} or a plain array.
+ * The array values correspond to the channel list order from the eventdevice.
+ */
 function decodeFrame(raw: string, indexMap: Map<number, string>): Record<string, number> | null {
   try {
     const parsed = JSON.parse(raw);
-    // RaceCapture format: {"s":{"d":[...]}} or {"d":[...]} or plain array
     const arr: unknown = parsed?.s?.d ?? parsed?.d ?? (Array.isArray(parsed) ? parsed : null);
     if (!Array.isArray(arr)) return null;
     const channels: Record<string, number> = {};
@@ -44,18 +45,17 @@ function decodeFrame(raw: string, indexMap: Map<number, string>): Record<string,
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const deviceId = searchParams.get('deviceId');
-  const session = searchParams.get('session') ?? '';
-  const sensorsParam = searchParams.get('sensors');
+  const channelsParam = searchParams.get('channels'); // JSON array of channel names
 
   if (!deviceId) {
     return new Response('deviceId required', { status: 400 });
   }
 
   let indexMap = new Map<number, string>();
-  if (sensorsParam) {
+  if (channelsParam) {
     try {
-      const sensorMap: Record<string, number | number[]> = JSON.parse(sensorsParam);
-      indexMap = buildIndexMap(sensorMap);
+      const channelNames: string[] = JSON.parse(channelsParam);
+      indexMap = buildIndexMap(channelNames);
     } catch { /* bad JSON, proceed without map */ }
   }
 
@@ -73,13 +73,10 @@ export async function GET(req: NextRequest) {
 
       abort.addEventListener('abort', close);
 
-      // Try connecting to telemetry.podium.live with the session cookie for auth
+      // telemetry.podium.live WebSocket — publicly accessible, no auth needed
       const wsUrl = `wss://telemetry.podium.live/${deviceId}`;
-      console.log(`[telemetry] connecting to ${wsUrl}`);
+      console.log(`[telemetry] connecting to ${wsUrl} (${indexMap.size} channels mapped)`);
 
-      // telemetry.podium.live is publicly accessible — no auth headers needed.
-      // WHATWG WebSocket (Node.js 22 native) does not support custom headers
-      // in the constructor; the stream is unauthenticated at the WS level.
       let ws: WebSocket;
       try {
         ws = new WebSocket(wsUrl);
@@ -90,16 +87,15 @@ export async function GET(req: NextRequest) {
       }
 
       ws.addEventListener('open', () => {
-        console.log(`[telemetry] connected`);
+        console.log(`[telemetry] connected to ${wsUrl}`);
         if (!closed) controller.enqueue(sse('status', JSON.stringify({ connected: true })));
       });
 
       ws.addEventListener('message', (evt: MessageEvent) => {
         if (closed) return;
         const raw = typeof evt.data === 'string' ? evt.data : '';
-        console.log(`[telemetry] raw:`, raw.slice(0, 300));
 
-        // Always forward the raw frame so the client can see it
+        // Always forward the raw frame for debugging
         controller.enqueue(sse('raw', JSON.stringify({ data: raw })));
 
         if (indexMap.size > 0) {
@@ -111,12 +107,12 @@ export async function GET(req: NextRequest) {
       });
 
       ws.addEventListener('error', () => {
-        console.log(`[telemetry] ws error`);
+        console.log(`[telemetry] ws error for ${deviceId}`);
         if (!closed) controller.enqueue(sse('error', JSON.stringify({ error: 'WebSocket error', url: wsUrl })));
       });
 
       ws.addEventListener('close', (evt: CloseEvent) => {
-        console.log(`[telemetry] ws closed: ${evt.code} ${evt.reason}`);
+        console.log(`[telemetry] ws closed for ${deviceId}: ${evt.code} ${evt.reason}`);
         if (!closed) controller.enqueue(sse('status', JSON.stringify({ connected: false, code: evt.code })));
         close();
       });
