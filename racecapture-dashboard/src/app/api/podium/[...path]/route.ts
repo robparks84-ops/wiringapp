@@ -59,40 +59,49 @@ async function proxy(
   }
 
   try {
-    const res = await fetch(url, {
-      method,
-      headers,
-      body,
-      redirect: 'manual', // capture Set-Cookie before any redirect
-    });
+    // First request — manual redirect so we can collect cookies at each hop
+    const res = await fetch(url, { method, headers, body, redirect: 'manual' });
 
-    const text = await res.text();
-    const responseHeaders: Record<string, string> = {
-      'Content-Type': res.headers.get('content-type') ?? 'application/json',
-    };
+    const allCookies: string[] = [];
 
-    console.log(`[podium proxy] ${method} ${podiumPath} → ${res.status}`);
-    console.log(`[podium proxy] set-cookie: ${res.headers.get('set-cookie')}`);
-    console.log(`[podium proxy] location: ${res.headers.get('location')}`);
-    console.log(`[podium proxy] body: ${text.slice(0, 300)}`);
-
-    const setCookie = res.headers.get('set-cookie');
-    if (setCookie) {
-      const cookies = setCookie
-        .split(/,\s*(?=[A-Za-z_][A-Za-z0-9_\-]*=)/)
-        .map((c) => c.trim().split(';')[0].trim())
-        .filter((c) => c.includes('='));
-      if (cookies.length > 0) {
-        responseHeaders['x-podium-set-session'] = cookies.join('; ');
+    function collectCookies(r: Response) {
+      // getSetCookie() returns each Set-Cookie header as a separate string
+      const raw: string[] = typeof (r.headers as any).getSetCookie === 'function'
+        ? (r.headers as any).getSetCookie()
+        : (r.headers.get('set-cookie') ?? '').split(/,\s*(?=[A-Za-z_][A-Za-z0-9_\-]*=)/).filter(Boolean);
+      for (const c of raw) {
+        const val = c.trim().split(';')[0].trim();
+        if (val.includes('=')) allCookies.push(val);
       }
     }
 
-    // Convert 3xx to 200 so the browser doesn't auto-follow the redirect and
-    // drop our custom x-podium-set-session header before the client can read it.
-    const status = res.status >= 300 && res.status < 400 ? 200 : res.status;
+    collectCookies(res);
+
+    let finalRes = res;
+
+    // Follow up to 5 redirects manually so we capture cookies at every hop
+    let nextUrl = res.headers.get('location');
+    let hops = 0;
+    while (nextUrl && res.status >= 300 && res.status < 400 && hops < 5) {
+      if (!nextUrl.startsWith('http')) nextUrl = `${PODIUM_BASE}${nextUrl}`;
+      const r = await fetch(nextUrl, { method: 'GET', headers, redirect: 'manual' });
+      collectCookies(r);
+      nextUrl = r.headers.get('location');
+      finalRes = r;
+      hops++;
+    }
+
+    const text = await finalRes.text();
+    const responseHeaders: Record<string, string> = {
+      'Content-Type': finalRes.headers.get('content-type') ?? 'application/json',
+    };
+
+    if (allCookies.length > 0) {
+      responseHeaders['x-podium-set-session'] = allCookies.join('; ');
+    }
 
     return new NextResponse(text, {
-      status,
+      status: finalRes.status >= 300 && finalRes.status < 400 ? 200 : finalRes.status,
       headers: responseHeaders,
     });
   } catch (err) {
