@@ -18,6 +18,16 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ p
   return proxy(req, await params, 'DELETE');
 }
 
+function getSetCookies(r: Response): string[] {
+  const raw: string[] =
+    typeof (r.headers as any).getSetCookie === 'function'
+      ? (r.headers as any).getSetCookie()
+      : (r.headers.get('set-cookie') ?? '')
+          .split(/,\s*(?=[A-Za-z_][A-Za-z0-9_\-]*=)/)
+          .filter(Boolean);
+  return raw.map((c) => c.trim().split(';')[0].trim()).filter((c) => c.includes('='));
+}
+
 async function proxy(
   req: NextRequest,
   params: { path: string[] },
@@ -32,64 +42,70 @@ async function proxy(
   const contentType = req.headers.get('content-type') ?? 'application/json';
 
   const headers: Record<string, string> = {
-    Accept: 'application/json, text/html',
+    Accept: 'text/html,application/json',
     'Content-Type': contentType,
-    'User-Agent': 'RaceCapture-Dashboard/1.0',
+    'User-Agent': 'Mozilla/5.0 (compatible; RaceCapture/1.0)',
   };
 
-  // Session cookie auth (no client credentials needed)
-  if (sessionCookie) {
-    headers['Cookie'] = sessionCookie;
-  }
-
-  // OAuth Bearer token auth (fallback)
-  if (bearerToken) {
-    headers['Authorization'] = `Bearer ${bearerToken}`;
-  }
-
-  // Pass through explicit Authorization header (e.g. Basic for OAuth token exchange)
+  if (sessionCookie) headers['Cookie'] = sessionCookie;
+  if (bearerToken) headers['Authorization'] = `Bearer ${bearerToken}`;
   const authHeader = req.headers.get('authorization');
-  if (authHeader) {
-    headers['Authorization'] = authHeader;
-  }
+  if (authHeader) headers['Authorization'] = authHeader;
 
   let body: string | undefined;
   if (method !== 'GET' && method !== 'DELETE') {
     body = await req.text();
   }
 
-  try {
-    // First request — manual redirect so we can collect cookies at each hop
-    const res = await fetch(url, { method, headers, body, redirect: 'manual' });
+  // For login: pre-fetch the sign-in page to get CSRF token + pre-session cookie,
+  // then inject both into the credential POST so Devise sets the session cookie.
+  if (method === 'POST' && podiumPath === '/users/sign_in') {
+    const pageRes = await fetch(`${PODIUM_BASE}/users/sign_in`, {
+      method: 'GET',
+      headers: { Accept: 'text/html', 'User-Agent': headers['User-Agent'] },
+      redirect: 'follow',
+    });
+    const pageHtml = await pageRes.text();
 
-    const allCookies: string[] = [];
+    const csrfMatch = pageHtml.match(/name="authenticity_token"[^>]*value="([^"]+)"/);
+    const csrfToken = csrfMatch?.[1];
 
-    function collectCookies(r: Response) {
-      // getSetCookie() returns each Set-Cookie header as a separate string
-      const raw: string[] = typeof (r.headers as any).getSetCookie === 'function'
-        ? (r.headers as any).getSetCookie()
-        : (r.headers.get('set-cookie') ?? '').split(/,\s*(?=[A-Za-z_][A-Za-z0-9_\-]*=)/).filter(Boolean);
-      for (const c of raw) {
-        const val = c.trim().split(';')[0].trim();
-        if (val.includes('=')) allCookies.push(val);
-      }
+    const preCookies = getSetCookies(pageRes);
+    if (preCookies.length > 0) {
+      headers['Cookie'] = preCookies.join('; ');
     }
 
-    collectCookies(res);
+    if (csrfToken && body) {
+      body = body + '&authenticity_token=' + encodeURIComponent(csrfToken);
+    }
 
+    console.log(`[podium login] csrf=${csrfToken ? 'found' : 'NOT FOUND'} pre-cookies=${preCookies.join(', ') || 'none'}`);
+  }
+
+  try {
+    const res = await fetch(url, { method, headers, body, redirect: 'manual' });
+
+    const allCookies = getSetCookies(res);
+
+    // Follow redirects manually to collect cookies at every hop
     let finalRes = res;
-
-    // Follow up to 5 redirects manually so we capture cookies at every hop
     let nextUrl = res.headers.get('location');
     let hops = 0;
-    while (nextUrl && res.status >= 300 && res.status < 400 && hops < 5) {
+    while (nextUrl && finalRes.status >= 300 && finalRes.status < 400 && hops < 5) {
       if (!nextUrl.startsWith('http')) nextUrl = `${PODIUM_BASE}${nextUrl}`;
-      const r = await fetch(nextUrl, { method: 'GET', headers, redirect: 'manual' });
-      collectCookies(r);
+      const cookieHeader = allCookies.join('; ');
+      const r = await fetch(nextUrl, {
+        method: 'GET',
+        headers: { ...headers, ...(cookieHeader ? { Cookie: cookieHeader } : {}) },
+        redirect: 'manual',
+      });
+      allCookies.push(...getSetCookies(r));
       nextUrl = r.headers.get('location');
       finalRes = r;
       hops++;
     }
+
+    console.log(`[podium proxy] ${method} ${podiumPath} → ${res.status}, cookies: ${allCookies.join(', ') || 'none'}`);
 
     const text = await finalRes.text();
     const responseHeaders: Record<string, string> = {
@@ -100,10 +116,8 @@ async function proxy(
       responseHeaders['x-podium-set-session'] = allCookies.join('; ');
     }
 
-    return new NextResponse(text, {
-      status: finalRes.status >= 300 && finalRes.status < 400 ? 200 : finalRes.status,
-      headers: responseHeaders,
-    });
+    const status = finalRes.status >= 300 && finalRes.status < 400 ? 200 : finalRes.status;
+    return new NextResponse(text, { status, headers: responseHeaders });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 502 });
   }
