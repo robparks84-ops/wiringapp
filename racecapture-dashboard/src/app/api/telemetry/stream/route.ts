@@ -77,11 +77,12 @@ export async function GET(req: NextRequest) {
       const wsUrl = `wss://telemetry.podium.live/${deviceId}`;
       console.log(`[telemetry] connecting to ${wsUrl}`);
 
+      // telemetry.podium.live is publicly accessible — no auth headers needed.
+      // WHATWG WebSocket (Node.js 22 native) does not support custom headers
+      // in the constructor; the stream is unauthenticated at the WS level.
       let ws: WebSocket;
       try {
-        const wsInit: Record<string, unknown> = {};
-        if (session) wsInit.headers = { Cookie: session };
-        ws = new WebSocket(wsUrl, wsInit as any);
+        ws = new WebSocket(wsUrl);
       } catch (err) {
         controller.enqueue(sse('error', JSON.stringify({ error: String(err) })));
         close();
