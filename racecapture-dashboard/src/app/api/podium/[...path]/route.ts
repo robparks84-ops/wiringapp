@@ -112,8 +112,16 @@ async function proxy(
       'Content-Type': finalRes.headers.get('content-type') ?? 'application/json',
     };
 
-    if (allCookies.length > 0) {
-      responseHeaders['x-podium-set-session'] = allCookies.join('; ');
+    // Deduplicate cookies by name — later hops override earlier ones so the
+    // authenticated session replaces any anonymous pre-session cookie.
+    const cookieMap = new Map<string, string>();
+    for (const c of allCookies) {
+      cookieMap.set(c.split('=')[0], c);
+    }
+    const dedupedCookies = Array.from(cookieMap.values());
+
+    if (dedupedCookies.length > 0) {
+      responseHeaders['x-podium-set-session'] = dedupedCookies.join('; ');
     }
 
     const status = finalRes.status >= 300 && finalRes.status < 400 ? 200 : finalRes.status;
