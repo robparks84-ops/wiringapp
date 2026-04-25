@@ -71,6 +71,11 @@ async function proxy(
       'Content-Type': res.headers.get('content-type') ?? 'application/json',
     };
 
+    console.log(`[podium proxy] ${method} ${podiumPath} → ${res.status}`);
+    console.log(`[podium proxy] set-cookie: ${res.headers.get('set-cookie')}`);
+    console.log(`[podium proxy] location: ${res.headers.get('location')}`);
+    console.log(`[podium proxy] body: ${text.slice(0, 300)}`);
+
     const setCookie = res.headers.get('set-cookie');
     if (setCookie) {
       const cookies = setCookie
