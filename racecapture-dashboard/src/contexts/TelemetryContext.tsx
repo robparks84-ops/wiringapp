@@ -125,12 +125,22 @@ export function TelemetryProvider({
       const current = stream;
       if (!current?.channels?.length) return;
 
-      // DEBUG: fetch the device URI once to see the live data structure
+      // DEBUG: probe possible live-data endpoints
       if (current.eventdevice_uri && !debugFetchedRef.current) {
         debugFetchedRef.current = true;
-        getDeviceLiveData(token, current.eventdevice_uri)
-          .then((d) => console.log('[device live data]', JSON.stringify(d).slice(0, 1000)))
-          .catch((e) => console.log('[device live data error]', e));
+        const base = current.eventdevice_uri.replace('https://podium.live', '');
+        const probes = [
+          base + '/data',
+          base + '/current',
+          base + '/samples?limit=1',
+          base + '/live',
+          '/api/v1/livestreams/' + current.device_serial,
+        ];
+        for (const p of probes) {
+          getDeviceLiveData(token, 'https://podium.live' + p)
+            .then((d) => console.log(`[probe ${p}]`, JSON.stringify(d).slice(0, 400)))
+            .catch((e) => console.log(`[probe ${p} ERR]`, String(e)));
+        }
       }
 
       const now = Date.now();

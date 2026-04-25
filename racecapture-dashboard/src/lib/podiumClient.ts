@@ -47,8 +47,8 @@ export async function getLivestreams(session: string) {
   return podiumFetch('/api/v1/livestreams?expand=true', session);
 }
 
-export async function getDeviceLiveData(session: string, deviceUri: string) {
-  const path = deviceUri.replace('https://podium.live', '') + '?expand=true';
+export async function getDeviceLiveData(session: string, fullUrl: string) {
+  const path = fullUrl.replace('https://podium.live', '');
   return podiumFetch(path, session);
 }
 
