@@ -79,7 +79,22 @@ export function TelemetryProvider({
     if (!token) return;
     try {
       const data = await getLivestreams(token);
-      const streamList: Stream[] = data.streams ?? [];
+      // API returns { total, eventdevices: [...] } — map to Stream shape
+      const rawDevices: any[] = data.eventdevices ?? data.streams ?? [];
+      const streamList: Stream[] = rawDevices.map((d: any) => ({
+        device_serial: String(d.id ?? ''),
+        device_name: d.name ?? '',
+        eventdevice_name: d.name ?? '',
+        eventdevice_uri: d.URI ?? d.uri ?? '',
+        device_uri: d.device_uri ?? '',
+        event_uri: d.event_uri ?? '',
+        laps_uri: d.laps_uri ?? '',
+        channels: (d.channels ?? []).map((ch: any) => ({
+          name: ch.name,
+          value: ch.value ?? 0,
+          unit: ch.units ?? ch.unit ?? '',
+        })),
+      }));
       setStreams(streamList);
       setConnected(streamList.length > 0);
       setLastError(null);
@@ -88,13 +103,13 @@ export function TelemetryProvider({
       setActiveStream((prev) => prev ?? stream);
 
       const current = streamList[0];
-      if (!current?.channels) return;
+      if (!current?.channels?.length) return;
 
       const now = Date.now();
       const channelMap = new Map<string, Channel>();
       const newHistoryEntries: [string, ChannelHistory][] = [];
 
-      for (const ch of current.channels as Channel[]) {
+      for (const ch of current.channels) {
         channelMap.set(ch.name, ch);
         updateStats(ch.name, ch.value);
 
@@ -134,9 +149,9 @@ export function TelemetryProvider({
       });
 
       // Load laps from the first stream if not already loaded
-      if (stream?.eventdevice_uri && laps.length === 0) {
+      const lapsUri = (stream as any)?.laps_uri ?? (stream?.eventdevice_uri ? `${stream.eventdevice_uri}/laps` : null);
+      if (lapsUri && laps.length === 0) {
         try {
-          const lapsUri = `${stream.eventdevice_uri}/laps`;
           const lapsData = await getLaps(token, lapsUri);
           if (lapsData?.laps) setLaps(lapsData.laps);
         } catch {
