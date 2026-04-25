@@ -72,6 +72,17 @@ export function TelemetryProvider({
 
   const distanceRef = useRef<number>(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeDeviceIdRef = useRef<string | null>(null);
+
+  const handleSetActiveStream = useCallback((s: Stream | null) => {
+    setActiveStream(s);
+    activeDeviceIdRef.current = s?.device_serial ?? null;
+    // Reset history when switching devices
+    setLaps([]);
+    setSelectedLap(null);
+    distanceRef.current = 0;
+    setHistory(new Map());
+  }, []);
 
   const isLive = selectedLap === null;
 
@@ -99,10 +110,18 @@ export function TelemetryProvider({
       setConnected(streamList.length > 0);
       setLastError(null);
 
-      const stream = streamList[0] ?? null;
-      setActiveStream((prev) => prev ?? stream);
+      // Use the user-selected device, defaulting to the first one
+      const stream =
+        (activeDeviceIdRef.current
+          ? streamList.find((s) => s.device_serial === activeDeviceIdRef.current)
+          : null) ?? streamList[0] ?? null;
 
-      const current = streamList[0];
+      if (!activeDeviceIdRef.current && stream) {
+        activeDeviceIdRef.current = stream.device_serial;
+      }
+      setActiveStream(stream);
+
+      const current = stream;
       if (!current?.channels?.length) return;
 
       const now = Date.now();
@@ -193,7 +212,7 @@ export function TelemetryProvider({
         graphByDistance,
         setGraphByDistance,
         setSelectedLap,
-        setActiveStream,
+        setActiveStream: handleSetActiveStream,
         resetSessionStats,
         connected,
         lastError,
