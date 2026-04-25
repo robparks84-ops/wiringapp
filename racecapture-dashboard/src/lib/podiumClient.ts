@@ -71,3 +71,16 @@ export async function getVenue(session: string, venueUri: string) {
   const path = venueUri.replace('https://podium.live', '');
   return podiumFetch(path, session);
 }
+
+// Returns { sensorMap: { ChannelName: index | [latIdx, lonIdx] } } for decoding telemetry stream
+export async function getSensorMap(
+  session: string,
+  deviceId: string,
+): Promise<Record<string, number | number[]>> {
+  const res = await fetch(`/api/podium/sensors/${deviceId}`, {
+    headers: { 'X-Podium-Session': session },
+  });
+  if (!res.ok) throw new Error(`getSensorMap ${res.status}`);
+  const data = await res.json();
+  return data.sensorMap ?? {};
+}
