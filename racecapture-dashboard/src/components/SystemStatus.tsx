@@ -17,7 +17,7 @@ const FROZEN_MS = 3000;
 const SLOW_MS = 1500;
 
 export default function SystemStatus() {
-  const { channels, connected, lastError } = useTelemetry();
+  const { channels, connected, lastError, streams, activeStream, setActiveStream } = useTelemetry();
   const updateTimestamps = useRef<Map<string, number[]>>(new Map());
   const [health, setHealth] = useState<ChannelHealth[]>([]);
 
@@ -71,6 +71,23 @@ export default function SystemStatus() {
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: connected ? '#2f9e44' : '#e03131', boxShadow: connected ? '0 0 6px #2f9e44' : 'none' }} />
           <span style={{ color: '#aaa', fontSize: 12 }}>podium.live: <span style={{ color: connected ? '#2f9e44' : '#e03131' }}>{connected ? 'LIVE' : 'OFFLINE'}</span></span>
         </div>
+        {streams.length > 1 && (
+          <select
+            value={activeStream?.device_serial ?? ''}
+            onChange={(e) => {
+              const s = streams.find((s) => s.device_serial === e.target.value) ?? null;
+              setActiveStream(s);
+            }}
+            style={{
+              background: '#1a1a24', color: '#ccc', border: '1px solid #333',
+              borderRadius: 6, fontSize: 12, padding: '2px 6px', cursor: 'pointer',
+            }}
+          >
+            {streams.map((s) => (
+              <option key={s.device_serial} value={s.device_serial}>{s.device_name}</option>
+            ))}
+          </select>
+        )}
         {gps && (
           <div style={{ color: '#aaa', fontSize: 12 }}>
             GPS: <span style={{ color: gps.value > 3 ? '#2f9e44' : gps.value > 1 ? '#f59f00' : '#e03131' }}>{gps.value.toFixed(0)} sats</span>

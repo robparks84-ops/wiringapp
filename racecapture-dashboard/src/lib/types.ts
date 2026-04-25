@@ -87,6 +87,7 @@ export interface Stream {
   eventdevice_uri: string;
   device_uri: string;
   event_uri: string;
+  laps_uri?: string;
   channels: Channel[];
 }
 

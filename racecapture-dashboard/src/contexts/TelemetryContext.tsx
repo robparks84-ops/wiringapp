@@ -9,12 +9,12 @@ import {
   useCallback,
 } from 'react';
 import type { Channel, ChannelHistory, Lap, Stream } from '@/lib/types';
-import { getLivestreams, getLaps } from '@/lib/podiumClient';
+import { getLivestreams, getLaps, getSensorMap } from '@/lib/podiumClient';
 import { updateStats, resetStats } from '@/lib/statsAccumulator';
 import { loadMathChannels, evaluateMathChannel } from '@/lib/mathChannels';
 
-const POLL_MS = 500;
-const HISTORY_SECONDS = 300; // 5 minutes of rolling history
+const POLL_MS = 2000; // REST poll for stream list / laps (not channel values)
+const HISTORY_SECONDS = 300;
 
 interface TelemetryState {
   channels: Map<string, Channel>;
@@ -71,92 +71,204 @@ export function TelemetryProvider({
   const [lastError, setLastError] = useState<string | null>(null);
 
   const distanceRef = useRef<number>(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeDeviceIdRef = useRef<string | null>(null);
+  // sensorMap from the eventdevice page: { channelName: index }
+  const sensorMapRef = useRef<Record<string, number | number[]>>({});
+  // Channel metadata from REST API: name → { unit }
+  const channelMetaRef = useRef<Map<string, { unit: string }>>(new Map());
+  // SSE EventSource for live telemetry
+  const sseRef = useRef<EventSource | null>(null);
+
+  const handleSetActiveStream = useCallback((s: Stream | null) => {
+    setActiveStream(s);
+    activeDeviceIdRef.current = s?.device_serial ?? null;
+    setLaps([]);
+    setSelectedLap(null);
+    distanceRef.current = 0;
+    setHistory(new Map());
+  }, []);
 
   const isLive = selectedLap === null;
 
+  // ── SSE TELEMETRY STREAM ─────────────────────────────────────────────────────
+  // Opens an SSE connection to /api/telemetry/stream which proxies to
+  // wss://telemetry.podium.live/[deviceId] server-side.
+  const openSseStream = useCallback((deviceId: string, session: string, sensorMap: Record<string, number | number[]>) => {
+    if (sseRef.current) {
+      sseRef.current.close();
+      sseRef.current = null;
+    }
+
+    const sensorsParam = encodeURIComponent(JSON.stringify(sensorMap));
+    const sessionParam = encodeURIComponent(session);
+    const url = `/api/telemetry/stream?deviceId=${deviceId}&session=${sessionParam}&sensors=${sensorsParam}`;
+
+    const es = new EventSource(url);
+    sseRef.current = es;
+
+    es.addEventListener('status', (evt) => {
+      try {
+        const d = JSON.parse(evt.data);
+        setConnected(!!d.connected);
+        if (!d.connected) setLastError(`Telemetry disconnected (code ${d.code})`);
+      } catch { /* ignore */ }
+    });
+
+    es.addEventListener('channels', (evt) => {
+      try {
+        const incoming: Record<string, number> = JSON.parse(evt.data);
+        const now = Date.now();
+
+        setChannels((prev) => {
+          const next = new Map(prev);
+          for (const [name, value] of Object.entries(incoming)) {
+            const meta = channelMetaRef.current.get(name);
+            next.set(name, { name, value, unit: meta?.unit ?? '' });
+            updateStats(name, value);
+
+            if (name === 'Speed' || name === 'speed') {
+              distanceRef.current += (value * 100) / 3600;
+            }
+          }
+          const mathChannels = loadMathChannels();
+          for (const mc of mathChannels) {
+            try {
+              const val = evaluateMathChannel(mc.formula, next);
+              next.set(mc.name, { name: mc.name, value: val, unit: mc.unit });
+              updateStats(mc.name, val);
+            } catch { /* skip */ }
+          }
+          return next;
+        });
+
+        setHistory((prev) => {
+          const next = new Map(prev);
+          const cutoff = now - HISTORY_SECONDS * 1000;
+          for (const [name, value] of Object.entries(incoming)) {
+            const arr = next.get(name) ?? [];
+            arr.push({ timestamp: now, distance: distanceRef.current, value });
+            next.set(name, arr.filter((e) => e.timestamp >= cutoff));
+          }
+          return next;
+        });
+
+        setLastError(null);
+      } catch { /* ignore */ }
+    });
+
+    es.addEventListener('raw', (evt) => {
+      try {
+        const d = JSON.parse(evt.data);
+        console.log('[telemetry raw]', String(d.data).slice(0, 300));
+      } catch { /* ignore */ }
+    });
+
+    es.addEventListener('error', (evt) => {
+      const msg = (evt as MessageEvent).data
+        ? JSON.parse((evt as MessageEvent).data)?.error
+        : 'SSE error';
+      console.log('[telemetry error]', msg);
+      setLastError(String(msg));
+    });
+
+    es.onerror = () => {
+      setConnected(false);
+    };
+
+    return es;
+  }, []);
+
+  // ── REST POLL (streams + laps) ────────────────────────────────────────────────
   const poll = useCallback(async () => {
     if (!token) return;
     try {
       const data = await getLivestreams(token);
-      const streamList: Stream[] = data.streams ?? [];
+      const rawDevices: any[] = data.eventdevices ?? data.streams ?? [];
+      const streamList: Stream[] = rawDevices.map((d: any) => ({
+        device_serial: String(d.id ?? ''),
+        device_name: d.name ?? '',
+        eventdevice_name: d.name ?? '',
+        eventdevice_uri: d.URI ?? d.uri ?? '',
+        device_uri: d.device_uri ?? '',
+        event_uri: d.event_uri ?? '',
+        laps_uri: d.laps_uri ?? '',
+        channels: (d.channels ?? []).map((ch: any) => ({
+          name: ch.name,
+          value: 0,
+          unit: ch.units ?? ch.unit ?? '',
+        })),
+      }));
       setStreams(streamList);
-      setConnected(streamList.length > 0);
-      setLastError(null);
 
-      const stream = streamList[0] ?? null;
-      setActiveStream((prev) => prev ?? stream);
-
-      const current = streamList[0];
-      if (!current?.channels) return;
-
-      const now = Date.now();
-      const channelMap = new Map<string, Channel>();
-      const newHistoryEntries: [string, ChannelHistory][] = [];
-
-      for (const ch of current.channels as Channel[]) {
-        channelMap.set(ch.name, ch);
-        updateStats(ch.name, ch.value);
-
-        // Accumulate distance using Speed channel if available
-        if (ch.name === 'Speed' || ch.name === 'speed') {
-          distanceRef.current += (ch.value * POLL_MS) / 3600; // speed km/h → km increment
-        }
-
-        newHistoryEntries.push([ch.name, { timestamp: now, distance: distanceRef.current, value: ch.value }]);
-      }
-
-      // Inject math channels into the channel map
-      const mathChannels = loadMathChannels();
-      for (const mc of mathChannels) {
-        try {
-          const val = evaluateMathChannel(mc.formula, channelMap);
-          channelMap.set(mc.name, { name: mc.name, value: val, unit: mc.unit });
-          updateStats(mc.name, val);
-          newHistoryEntries.push([mc.name, { timestamp: now, distance: distanceRef.current, value: val }]);
-        } catch {
-          // skip invalid formulas
+      // Update channel metadata (unit info) from REST API definitions
+      for (const s of streamList) {
+        for (const ch of s.channels) {
+          channelMetaRef.current.set(ch.name, { unit: ch.unit });
         }
       }
 
-      setChannels(channelMap);
-      setHistory((prev) => {
-        const next = new Map(prev);
-        const cutoff = now - HISTORY_SECONDS * 1000;
-        for (const [name, entry] of newHistoryEntries) {
-          const arr = next.get(name) ?? [];
-          arr.push(entry);
-          // Trim old entries
-          const trimmed = arr.filter((e) => e.timestamp >= cutoff);
-          next.set(name, trimmed);
-        }
-        return next;
-      });
+      const stream =
+        (activeDeviceIdRef.current
+          ? streamList.find((s) => s.device_serial === activeDeviceIdRef.current)
+          : null) ?? streamList[0] ?? null;
 
-      // Load laps from the first stream if not already loaded
-      if (stream?.eventdevice_uri && laps.length === 0) {
+      if (!activeDeviceIdRef.current && stream) {
+        activeDeviceIdRef.current = stream.device_serial;
+      }
+      setActiveStream(stream);
+
+      // Fetch sensor map + open SSE when we have a device (opens once per device)
+      if (stream && (!sseRef.current || sseRef.current.readyState === EventSource.CLOSED)) {
+        const deviceId = stream.device_serial;
+        getSensorMap(token, deviceId)
+          .then((sensorMap) => {
+            sensorMapRef.current = sensorMap;
+            console.log(`[telemetry] sensorMap loaded (${Object.keys(sensorMap).length} channels)`);
+            openSseStream(deviceId, token, sensorMap);
+          })
+          .catch((err) => {
+            console.log('[telemetry] sensorMap fetch failed:', err, '— opening stream without decode map');
+            openSseStream(deviceId, token, {});
+          });
+      }
+
+      // Load laps
+      const lapsUri = (stream as any)?.laps_uri ?? (stream?.eventdevice_uri ? `${stream.eventdevice_uri}/laps` : null);
+      if (lapsUri && laps.length === 0) {
         try {
-          const lapsUri = `${stream.eventdevice_uri}/laps`;
           const lapsData = await getLaps(token, lapsUri);
           if (lapsData?.laps) setLaps(lapsData.laps);
-        } catch {
-          // laps not available yet
-        }
+        } catch { /* laps not available yet */ }
       }
     } catch (err) {
       setLastError(String(err));
       setConnected(false);
     }
-  }, [token, laps.length]);
+  }, [token, laps.length, openSseStream]);
 
   useEffect(() => {
     if (!token) return;
     poll();
-    intervalRef.current = setInterval(poll, POLL_MS);
+    pollIntervalRef.current = setInterval(poll, POLL_MS);
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (sseRef.current) sseRef.current.close();
     };
   }, [token, poll]);
+
+  // Re-open SSE when active device changes via handleSetActiveStream
+  useEffect(() => {
+    if (!token || !activeDeviceIdRef.current) return;
+    const deviceId = activeDeviceIdRef.current;
+    getSensorMap(token, deviceId)
+      .then((sensorMap) => {
+        sensorMapRef.current = sensorMap;
+        openSseStream(deviceId, token, sensorMap);
+      })
+      .catch(() => openSseStream(deviceId, token, {}));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStream?.device_serial]);
 
   const resetSessionStats = useCallback(() => {
     resetStats();
@@ -178,7 +290,7 @@ export function TelemetryProvider({
         graphByDistance,
         setGraphByDistance,
         setSelectedLap,
-        setActiveStream,
+        setActiveStream: handleSetActiveStream,
         resetSessionStats,
         connected,
         lastError,
