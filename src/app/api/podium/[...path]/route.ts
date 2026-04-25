@@ -70,9 +70,12 @@ async function proxy(
 
     const setCookie = res.headers.get('set-cookie');
     if (setCookie) {
-      const sessionMatch = setCookie.match(/([a-zA-Z0-9_]+session[a-zA-Z0-9_]*)=([^;]+)/i);
-      if (sessionMatch) {
-        responseHeaders['x-podium-set-session'] = `${sessionMatch[1]}=${sessionMatch[2]}`;
+      const cookies = setCookie
+        .split(/,\s*(?=[A-Za-z_][A-Za-z0-9_\-]*=)/)
+        .map((c) => c.trim().split(';')[0].trim())
+        .filter((c) => c.includes('='));
+      if (cookies.length > 0) {
+        responseHeaders['x-podium-set-session'] = cookies.join('; ');
       }
     }
 
