@@ -79,8 +79,12 @@ async function proxy(
       }
     }
 
+    // Convert 3xx to 200 so the browser doesn't auto-follow the redirect and
+    // drop our custom x-podium-set-session header before the client can read it.
+    const status = res.status >= 300 && res.status < 400 ? 200 : res.status;
+
     return new NextResponse(text, {
-      status: res.status,
+      status,
       headers: responseHeaders,
     });
   } catch (err) {
