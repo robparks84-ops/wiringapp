@@ -125,7 +125,7 @@ async function proxy(
     const text = await res.text();
 
     if (podiumPath.includes('livestreams')) {
-      console.log(`[livestreams] status=${res.status} body=${text.slice(0, 500)}`);
+      console.log(`[livestreams] status=${res.status} body=${text.slice(0, 2000)}`);
     }
 
     // If podium redirects to the login page, return 401 instead of HTML
