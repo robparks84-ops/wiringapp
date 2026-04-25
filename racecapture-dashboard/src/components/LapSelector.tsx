@@ -30,15 +30,17 @@ export default function LapSelector() {
       <Select
         size="xs"
         placeholder="Review lap…"
-        value={selectedLap?.id ?? null}
+        value={selectedLap?.id != null ? String(selectedLap.id) : null}
         onChange={(id) => {
-          const lap = laps.find((l) => l.id === id) ?? null;
+          const lap = laps.find((l) => String(l.id) === id) ?? null;
           setSelectedLap(lap);
         }}
-        data={laps.map((l) => ({
-          value: l.id,
-          label: `Lap ${l.lapNumber}  ${formatLapTime(l.lapTime)}${l.id === best.id ? ' ★' : ''}`,
-        }))}
+        data={laps
+          .filter((l) => l.id != null)
+          .map((l) => ({
+            value: String(l.id),
+            label: `Lap ${l.lapNumber}  ${formatLapTime(l.lapTime)}${l.id === best.id ? ' ★' : ''}`,
+          }))}
         style={{ width: 200 }}
         clearable
       />
