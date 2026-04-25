@@ -9,7 +9,7 @@ import {
   useCallback,
 } from 'react';
 import type { Channel, ChannelHistory, Lap, Stream } from '@/lib/types';
-import { getLivestreams, getLaps } from '@/lib/podiumClient';
+import { getLivestreams, getLaps, getDeviceLiveData } from '@/lib/podiumClient';
 import { updateStats, resetStats } from '@/lib/statsAccumulator';
 import { loadMathChannels, evaluateMathChannel } from '@/lib/mathChannels';
 
@@ -73,6 +73,7 @@ export function TelemetryProvider({
   const distanceRef = useRef<number>(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeDeviceIdRef = useRef<string | null>(null);
+  const debugFetchedRef = useRef<boolean>(false);
 
   const handleSetActiveStream = useCallback((s: Stream | null) => {
     setActiveStream(s);
@@ -123,6 +124,14 @@ export function TelemetryProvider({
 
       const current = stream;
       if (!current?.channels?.length) return;
+
+      // DEBUG: fetch the device URI once to see the live data structure
+      if (current.eventdevice_uri && !debugFetchedRef.current) {
+        debugFetchedRef.current = true;
+        getDeviceLiveData(token, current.eventdevice_uri)
+          .then((d) => console.log('[device live data]', JSON.stringify(d).slice(0, 1000)))
+          .catch((e) => console.log('[device live data error]', e));
+      }
 
       const now = Date.now();
       const channelMap = new Map<string, Channel>();
