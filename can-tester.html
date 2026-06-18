@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>CAN Tester</title>
+<style>
+:root{--bg:#0f1117;--bg2:#1a1d27;--bg3:#252836;--bd:#333644;--tx:#e8e9f0;--dim:#8b8fa8;--bl:#4b8ef1;--gn:#4caf76;--rd:#e05959;--or:#e8944a;--yw:#d4b840;--r:8px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;line-height:1.5;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100dvh;height:100vh}
+.hdr{background:var(--bg2);border-bottom:1px solid var(--bd);padding:10px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.hdr h1{font-size:16px;font-weight:700;flex:1}
+.hdr-guide{background:none;border:1px solid var(--bd);color:var(--bl);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer}
+.content{flex:1;overflow-y:auto;padding:14px 14px 86px;-webkit-overflow-scrolling:touch}
+.tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--bd);display:flex;z-index:50;padding-bottom:env(safe-area-inset-bottom,0)}
+.tb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 2px;gap:2px;border:none;background:none;color:var(--dim);font-size:10px;font-weight:600;cursor:pointer;min-height:54px}
+.tb.on{color:var(--bl)}
+.tb svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* cards & layout */
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:12px;margin-bottom:10px}
+.explain{background:#12172a;border:1px solid #1e3060;border-radius:var(--r);padding:10px 12px;margin-bottom:10px;font-size:13px;color:#9eb8e8;line-height:1.6}
+.explain strong{color:#c8d8f8}
+.explain code{background:#1e2a4a;padding:1px 5px;border-radius:3px;font-family:monospace;font-size:12px}
+.tip{background:#0f2010;border:1px solid #1e4020;border-radius:6px;padding:8px 12px;margin:8px 0;font-size:12px;color:#6cba7c;line-height:1.5}
+.tip::before{content:"💡 ";font-size:13px}
+.warn{background:#221500;border:1px solid #4a2800;border-radius:6px;padding:8px 12px;margin:8px 0;font-size:12px;color:#c8844a;line-height:1.5}
+.fld{margin-bottom:12px}
+label{font-size:12px;color:var(--dim);display:block;margin-bottom:4px;font-weight:600}
+.hint{font-size:11px;color:var(--dim);margin-top:3px;line-height:1.4}
+input,select,textarea{background:var(--bg3);border:1px solid var(--bd);border-radius:6px;color:var(--tx);padding:9px 10px;font-size:15px;width:100%;outline:none;-webkit-appearance:none;appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--bl)}
+textarea{font-family:'Menlo','Courier New',monospace;resize:vertical}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b8fa8' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
+.row{display:flex;gap:8px;align-items:center}
+.row.wrap{flex-wrap:wrap}
+.col{flex:1;min-width:0}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:7px;border:none;cursor:pointer;font-size:14px;font-weight:700;min-height:44px;white-space:nowrap}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.bp{background:var(--bl);color:#fff}
+.bg{background:var(--gn);color:#fff}
+.br{background:var(--rd);color:#fff}
+.bo{background:transparent;border:1px solid var(--bd);color:var(--tx)}
+.bs{padding:7px 12px;font-size:13px;min-height:36px;font-weight:600}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+h2{font-size:18px;font-weight:800;margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--dim);margin-bottom:14px;line-height:1.4}
+.sec{font-size:11px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin:16px 0 8px}
+.hr{border:none;border-top:1px solid var(--bd);margin:14px 0}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.b-bl{background:#1e3a5f;color:#7eb8f7}
+.b-gn{background:#163325;color:#5bc68a}
+.b-or{background:#3d2810;color:#e8944a}
+.b-rd{background:#3d1212;color:#e05959}
+.mono{font-family:'Menlo','Courier New',monospace}
+/* Bit grid */
+.bit-grid{display:grid;grid-template-columns:22px repeat(8,1fr);gap:2px}
+.bc{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:3px;font-size:10px;font-weight:700;cursor:pointer;user-select:none;border:1px solid transparent}
+.brl{font-size:10px;color:var(--dim);display:flex;align-items:center;justify-content:flex-end;padding-right:3px;font-family:monospace}
+.bhdr{font-size:9px;color:var(--dim);text-align:center;font-family:monospace}
+/* Console */
+.console{background:#080b0f;border:1px solid var(--bd);border-radius:6px;padding:10px;height:200px;overflow-y:auto;font-family:'Menlo','Courier New',monospace;font-size:12px;-webkit-overflow-scrolling:touch}
+.cl{color:#a9dc76;white-space:pre-wrap;word-break:break-all;margin-bottom:1px;line-height:1.4}
+.ce{color:#e05959}.cw{color:#e8944a}
+/* Gauges */
+.gauge-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.gc{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:10px;text-align:center}
+.gn{font-size:11px;color:var(--dim);font-weight:700;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gv{font-size:24px;font-weight:900;font-family:monospace;line-height:1}
+.gu{font-size:10px;color:var(--dim);margin-top:2px}
+.gbar{height:6px;border-radius:3px;background:var(--bg3);margin-top:8px;overflow:hidden}
+.gfill{height:100%;border-radius:3px;transition:width .3s}
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:var(--bg2);border-radius:16px 16px 0 0;padding:20px 16px;width:100%;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.modal h3{font-size:18px;font-weight:800;margin-bottom:12px}
+.modal-actions{display:flex;gap:8px;margin-top:16px}
+.modal-actions .btn{flex:1}
+/* Learn modal */
+.guide-section{margin-bottom:20px}
+.guide-section h4{font-size:15px;font-weight:800;color:var(--bl);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.guide-section p{font-size:13px;color:#c0c8e0;line-height:1.7;margin-bottom:8px}
+.guide-section .example{background:var(--bg3);border-radius:6px;padding:10px;font-family:monospace;font-size:12px;color:#a9dc76;margin:8px 0;line-height:1.8}
+.guide-section .diagram{background:var(--bg3);border:1px solid var(--bd);border-radius:6px;padding:10px;font-family:monospace;font-size:11px;color:#c0c8e0;margin:8px 0;overflow-x:auto;white-space:pre;line-height:1.6}
+/* Channel/signal rows */
+.item-row{background:var(--bg3);border:1px solid var(--bd);border-radius:7px;padding:10px;margin-bottom:8px}
+.item-name{font-size:14px;font-weight:700;margin-bottom:2px}
+.item-meta{font-size:12px;color:var(--dim);line-height:1.5}
+.item-actions{display:flex;gap:6px;margin-top:8px}
+.icon-btn{background:none;border:1px solid var(--bd);color:var(--dim);border-radius:5px;padding:5px 10px;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-weight:600}
+.icon-btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.icon-btn.del{color:var(--rd);border-color:#3d1212}
+.empty{text-align:center;color:var(--dim);padding:36px 20px;font-size:13px;line-height:1.7}
+.hex-in{font-family:'Menlo','Courier New',monospace;font-size:16px;letter-spacing:.12em}
+.sig-val{font-size:18px;font-weight:900;font-family:monospace;text-align:right}
+/* Concept pill */
+.concept{display:inline-block;background:#1a2240;border:1px solid #2a3a70;border-radius:4px;padding:1px 7px;font-size:12px;color:#8aacf0;font-family:monospace;cursor:pointer;margin:0 2px}
+.concept:hover{background:#2a3a70}
+/* Collapsible */
+.collapse-hdr{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:8px 0}
+.collapse-hdr span{font-size:13px;font-weight:700;color:var(--bl)}
+.collapse-hdr .arrow{font-size:12px;color:var(--dim);transition:transform .2s}
+.collapse-hdr.open .arrow{transform:rotate(180deg)}
+.collapse-body{display:none}
+.collapse-body.open{display:block}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="hdr">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4b8ef1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2M8 12v2M12 12v3M16 12v2"/></svg>
+    <h1 id="hdr-title">CAN Tester</h1>
+    <button class="hdr-guide" onclick="showGuide()">? Guide</button>
+  </div>
+  <div class="content" id="content"></div>
+  <div class="tabbar">
+    <button class="tb on" onclick="switchTab('channels')" id="tb-channels">
+      <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1.2" fill="currentColor"/><circle cx="3.5" cy="12" r="1.2" fill="currentColor"/><circle cx="3.5" cy="18" r="1.2" fill="currentColor"/></svg>
+      Channels
+    </button>
+    <button class="tb" onclick="switchTab('builder')" id="tb-builder">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
+      Builder
+    </button>
+    <button class="tb" onclick="switchTab('lua')" id="tb-lua">
+      <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      Lua
+    </button>
+    <button class="tb" onclick="switchTab('dashboard')" id="tb-dashboard">
+      <svg viewBox="0 0 24 24"><path d="M22 12A10 10 0 1 1 12 2"/><path d="M22 2L12 12"/><circle cx="12" cy="12" r="2.5"/></svg>
+      Dashboard
+    </button>
+  </div>
+</div>
+<div id="modal-root"></div>
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const S={
+  tab:'channels',
+  channels:[],
+  frame:{id:0x0CE0,extended:false,data:[0,0,0,0,0,0,0,0],signals:[],label:'New Frame'},
+  lua:{script:'',console:[],running:false,tickHz:10,error:null},
+  sim:{running:false,hz:10},
+  vals:{},
+  _simTimer:null,_luaTimer:null,
+};
+
+function save(){try{localStorage.setItem('ct2-ch',JSON.stringify(S.channels));localStorage.setItem('ct2-fr',JSON.stringify(S.frame));localStorage.setItem('ct2-lua',S.lua.script);localStorage.setItem('ct2-lhz',String(S.lua.tickHz));localStorage.setItem('ct2-shz',String(S.sim.hz));}catch(e){}}
+function load(){try{const c=localStorage.getItem('ct2-ch');if(c)S.channels=JSON.parse(c);const f=localStorage.getItem('ct2-fr');if(f)S.frame=JSON.parse(f);const l=localStorage.getItem('ct2-lua');if(l)S.lua.script=l;const lh=localStorage.getItem('ct2-lhz');if(lh)S.lua.tickHz=+lh;const sh=localStorage.getItem('ct2-shz');if(sh)S.sim.hz=+sh;}catch(e){}if(!S.lua.script)S.lua.script=DEFAULT_SCRIPT;}
+
+// ── Presets ───────────────────────────────────────────────────────────────────
+const PRESETS=[
+  {id:'ms3pro',name:'MS3Pro Evo (MegaSquirt)',desc:'Engine ECU. CAN ID 0x0CE0. Sends RPM, temperatures, pressures every few milliseconds.',
+   channels:[
+    {id:'ms-rpm', name:'RPM',       unit:'RPM', min:0,  max:8000,def:2500,wave:'sine',    period:4000, noise:50},
+    {id:'ms-tps', name:'TPS',       unit:'%',   min:0,  max:100, def:20,  wave:'ramp',    period:5000, noise:0.5},
+    {id:'ms-map', name:'MAP',       unit:'kPa', min:10, max:250, def:100, wave:'sine',    period:4000, noise:1},
+    {id:'ms-clt', name:'Coolant',   unit:'°C',  min:-40,max:130, def:85,  wave:'constant',period:10000,noise:0.5},
+    {id:'ms-iat', name:'IAT',       unit:'°C',  min:-40,max:80,  def:30,  wave:'constant',period:10000,noise:0.2},
+    {id:'ms-afr', name:'AFR',       unit:'λ',   min:0.7,max:1.5, def:1.0, wave:'sine',    period:2000, noise:0.01},
+    {id:'ms-batt',name:'Battery',   unit:'V',   min:10, max:15,  def:13.8,wave:'constant',period:5000, noise:0.1},
+    {id:'ms-fp',  name:'Fuel Pres', unit:'kPa', min:0,  max:500, def:300, wave:'constant',period:5000, noise:5},
+    {id:'ms-ign', name:'Ignition',  unit:'°',   min:-10,max:50,  def:25,  wave:'sine',    period:3000, noise:0.5},
+    {id:'ms-spd', name:'Speed',     unit:'km/h',min:0,  max:250, def:80,  wave:'ramp',    period:8000, noise:1},
+    {id:'ms-op',  name:'Oil Pres',  unit:'kPa', min:0,  max:700, def:400, wave:'constant',period:5000, noise:10},
+    {id:'ms-gear',name:'Gear',      unit:'',    min:0,  max:6,   def:3,   wave:'step',    period:6000, noise:0},
+   ],
+   frame:{id:0x0CE0,extended:false,label:'MS3Pro Frame 0 — RPM / TPS / MAP / Coolant',
+    data:[0x27,0x10,0x04,0xB0,0x03,0xE8,0x03,0x44],
+    signals:[
+     {id:'s0',name:'RPM',    startBit:7, bitLength:16,byteOrder:'motorola',signed:false,scale:1,   offset:0, unit:'RPM'},
+     {id:'s1',name:'TPS',    startBit:23,bitLength:16,byteOrder:'motorola',signed:false,scale:0.1, offset:0, unit:'%'},
+     {id:'s2',name:'MAP',    startBit:39,bitLength:16,byteOrder:'motorola',signed:false,scale:0.1, offset:0, unit:'kPa'},
+     {id:'s3',name:'Coolant',startBit:55,bitLength:16,byteOrder:'motorola',signed:true, scale:0.1, offset:0, unit:'°C'},
+    ]}},
+  {id:'aim-pdm32',name:'AIM PDM32 (Power Distribution)',desc:'Controls and monitors up to 32 outputs. Reports output status and current draw.',
+   channels:[
+    {id:'pdm-stat',name:'Out Status 1-8',unit:'bits',min:0,max:255,def:255,wave:'constant',period:1000,noise:0},
+    {id:'pdm-amps',name:'Total Current', unit:'A',   min:0,max:100,def:15, wave:'sine',    period:5000,noise:0.5},
+    {id:'pdm-o1',  name:'Output 1',      unit:'A',   min:0,max:30, def:5,  wave:'constant',period:5000,noise:0.2},
+    {id:'pdm-o2',  name:'Output 2',      unit:'A',   min:0,max:30, def:3,  wave:'constant',period:5000,noise:0.1},
+   ],
+   frame:{id:0x0064,extended:false,label:'PDM32 — Output Status & Current',
+    data:[0xFF,0xFF,0,150,0,0,0,0],
+    signals:[
+     {id:'s0',name:'Output Status 1-8',startBit:0, bitLength:8, byteOrder:'intel',signed:false,scale:1,  offset:0,unit:'bits'},
+     {id:'s1',name:'Total Current',    startBit:16,bitLength:16,byteOrder:'intel',signed:false,scale:0.1,offset:0,unit:'A'},
+    ]}},
+  {id:'flagtronics',name:'Flagtronics FT200 (Flag Receiver)',desc:'Receives wireless flag signals from marshals. Tells you what flag colour is being shown.',
+   channels:[
+    {id:'fl-color', name:'Flag Color',      unit:'',  min:0,max:7,  def:0, wave:'step',    period:8000, noise:0},
+    {id:'fl-sector',name:'Sector',          unit:'',  min:0,max:255,def:1, wave:'step',    period:10000,noise:0},
+    {id:'fl-rssi',  name:'Signal Strength', unit:'%', min:0,max:100,def:85,wave:'constant',period:5000, noise:3},
+    {id:'fl-batt',  name:'Battery',         unit:'%', min:0,max:100,def:90,wave:'ramp',    period:60000,noise:0},
+   ],
+   frame:{id:0x00FF,extended:false,label:'FT200 — Flag Status Broadcast',
+    data:[0,1,85,90,0,0,0,0],
+    signals:[
+     {id:'s0',name:'Flag Color',     startBit:0, bitLength:8,byteOrder:'intel',signed:false,scale:1,offset:0,unit:''},
+     {id:'s1',name:'Sector',         startBit:8, bitLength:8,byteOrder:'intel',signed:false,scale:1,offset:0,unit:''},
+     {id:'s2',name:'Signal Strength',startBit:16,bitLength:8,byteOrder:'intel',signed:false,scale:1,offset:0,unit:'%'},
+     {id:'s3',name:'Battery Level',  startBit:24,bitLength:8,byteOrder:'intel',signed:false,scale:1,offset:0,unit:'%'},
+    ]}},
+  {id:'blink-marine',name:'Blink Marine PKP-2600 (Keypad)',desc:'12-button CAN keypad with backlit LEDs. Each button press sends a bit in the frame.',
+   channels:[
+    {id:'bm-btn18', name:'Buttons 1–8',  unit:'bits',min:0,max:255,def:0,wave:'constant',period:1000,noise:0},
+    {id:'bm-btn912',name:'Buttons 9–12', unit:'bits',min:0,max:15, def:0,wave:'constant',period:1000,noise:0},
+    {id:'bm-led18', name:'LED State 1–8',unit:'bits',min:0,max:255,def:0,wave:'constant',period:1000,noise:0},
+   ],
+   frame:{id:0x181,extended:false,label:'PKP-2600 — Button & LED States',
+    data:[0,0,0,0,0,0,0,5],
+    signals:[
+     {id:'s0',name:'Buttons 1–8',  startBit:0, bitLength:8,byteOrder:'intel',signed:false,scale:1,offset:0,unit:'bits'},
+     {id:'s1',name:'Buttons 9–12', startBit:8, bitLength:4,byteOrder:'intel',signed:false,scale:1,offset:0,unit:'bits'},
+     {id:'s2',name:'LED State 1–8',startBit:16,bitLength:8,byteOrder:'intel',signed:false,scale:1,offset:0,unit:'bits'},
+    ]}},
+  {id:'obdii',name:'OBD-II (Standard Car Diagnostics)',desc:'Standard protocol used by all road cars since 1996. Query any sensor by PID number.',
+   channels:[
+    {id:'ob-rpm',name:'Engine RPM',  unit:'RPM', min:0,  max:8000,def:2000,wave:'sine',    period:4000, noise:30},
+    {id:'ob-spd',name:'Speed',       unit:'km/h',min:0,  max:200, def:80,  wave:'ramp',    period:8000, noise:0},
+    {id:'ob-clt',name:'Coolant Temp',unit:'°C',  min:-40,max:215, def:90,  wave:'constant',period:10000,noise:1},
+    {id:'ob-tps',name:'Throttle Pos',unit:'%',   min:0,  max:100, def:15,  wave:'ramp',    period:5000, noise:0.5},
+   ],
+   frame:{id:0x7E8,extended:false,label:'OBD-II Response — Engine RPM (PID 0x0C)',
+    data:[4,0x41,0x0C,0x1A,0xF8,0,0,0],
+    signals:[
+     {id:'s0',name:'Engine RPM',startBit:23,bitLength:16,byteOrder:'motorola',signed:false,scale:0.25,offset:0,unit:'RPM'},
+    ]}},
+];
+
+const DEFAULT_SCRIPT=`-- RaceCapture Lua script (runs offline in JS-compatibility mode)
+--
+-- HOW THIS WORKS:
+--   onTick() is called repeatedly at the rate you set (default 10x/sec)
+--   getChannel("Name")     reads a channel value from the Channel Map tab
+--   setChannel("Name", v)  writes a value (shows on Dashboard)
+--   println("text")        prints a line to the console below
+--   readCAN(0)             reads the active frame from the Builder tab
+--
+-- TIP: Load a preset on the Channels tab first so channels exist.
+
+local tick = 0
+
+function onTick()
+  tick = tick + 1
+
+  -- Read channel values (must exist in Channel Map tab)
+  local rpm = getChannel("RPM")
+  local coolant = getChannel("Coolant")
+
+  -- Print every 10 ticks (~1 second at 10 Hz)
+  if tick % 10 == 0 then
+    println("Tick " .. tick .. " | RPM: " .. math.floor(rpm) .. " | CLT: " .. string.format("%.1f", coolant) .. "°C")
+  end
+
+  -- Example: warn on high RPM
+  if rpm > 6000 then
+    println("WARNING: RPM over 6000!")
+  end
+
+  -- Example: write a computed channel
+  setChannel("RPM_kRPM", rpm * 0.001)
+end`;
+
+// ── CAN Encoding ──────────────────────────────────────────────────────────────
+function motorolaAbsPos(b){return Math.floor(b/8)*8+(7-b%8);}
+function nextMoto(b){return b%8===0?b+15:b-1;}
+function decodeSignal(data,sig){
+  let raw=0n;
+  if(sig.byteOrder==='intel'){for(let i=0;i<sig.bitLength;i++){const abs=sig.startBit+i,byt=Math.floor(abs/8),bit=abs%8;if(byt<8)raw|=BigInt((data[byt]>>bit)&1)<<BigInt(i);}}
+  else{let cur=sig.startBit;for(let i=0;i<sig.bitLength;i++){const abs=motorolaAbsPos(cur),byt=Math.floor(abs/8),bit=abs%8;if(byt<8)raw|=BigInt((data[byt]>>bit)&1)<<BigInt(sig.bitLength-1-i);if(i<sig.bitLength-1)cur=nextMoto(cur);}}
+  if(sig.signed){const sb=1n<<BigInt(sig.bitLength-1);if(raw&sb)raw-=1n<<BigInt(sig.bitLength);}
+  return Number(raw)*sig.scale+sig.offset;
+}
+function encodeSignal(data,sig,physical){
+  const out=[...data];let raw=BigInt(Math.round((physical-sig.offset)/sig.scale));const mask=(1n<<BigInt(sig.bitLength))-1n;raw=raw&mask;
+  if(sig.byteOrder==='intel'){for(let i=0;i<sig.bitLength;i++){const abs=sig.startBit+i,byt=Math.floor(abs/8),bit=abs%8;if(byt<8){const b=Number((raw>>BigInt(i))&1n);if(b)out[byt]|=(1<<bit);else out[byt]&=~(1<<bit);}}}
+  else{let cur=sig.startBit;for(let i=0;i<sig.bitLength;i++){const abs=motorolaAbsPos(cur),byt=Math.floor(abs/8),bit=abs%8;if(byt<8){const b=Number((raw>>BigInt(sig.bitLength-1-i))&1n);if(b)out[byt]|=(1<<bit);else out[byt]&=~(1<<bit);}if(i<sig.bitLength-1)cur=nextMoto(cur);}}
+  return out;
+}
+function getSignalBits(sig){
+  const bits=new Set();
+  if(sig.byteOrder==='intel'){for(let i=0;i<sig.bitLength;i++){const abs=sig.startBit+i;if(abs<64)bits.add(abs);}}
+  else{let cur=sig.startBit;for(let i=0;i<sig.bitLength;i++){const abs=motorolaAbsPos(cur);if(abs<64)bits.add(abs);if(i<sig.bitLength-1)cur=nextMoto(cur);}}
+  return bits;
+}
+function bytesToHex(d){return d.map(b=>b.toString(16).padStart(2,'0').toUpperCase()).join(' ');}
+function hexToBytes(s){const c=s.replace(/\s/g,'');const b=[];for(let i=0;i<Math.min(c.length,16);i+=2){const v=parseInt(c.slice(i,i+2),16);b.push(isNaN(v)?0:v&255);}while(b.length<8)b.push(0);return b.slice(0,8);}
+const SIG_COLORS=['#4dabf7','#a9e34b','#ffd43b','#ff922b','#f783ac','#da77f2','#69db7c','#ff6b6b','#4ecdc4','#74c0fc'];
+
+// ── Simulation ────────────────────────────────────────────────────────────────
+function sampleWave(ch,t){
+  const range=ch.max-ch.min,period=ch.period/1000;let v;
+  switch(ch.wave){
+    case 'sine':v=ch.min+(range/2)*(1+Math.sin(2*Math.PI*t/period));break;
+    case 'ramp':v=ch.min+range*((t%period)/period);break;
+    case 'step':v=(Math.floor(t/(period/2))%2===0)?ch.min:ch.max;break;
+    case 'random-walk':{const prev=S.vals[ch.id]??ch.def;const step=range*0.01;v=Math.max(ch.min,Math.min(ch.max,prev+(Math.random()-.5)*2*step));break;}
+    default:v=ch.def;
+  }
+  if(ch.wave!=='random-walk')v+=(Math.random()-.5)*2*ch.noise;
+  return Math.max(ch.min,Math.min(ch.max,v));
+}
+let simStart=0;
+function startSim(){if(S._simTimer)clearInterval(S._simTimer);simStart=Date.now();S.sim.running=true;S._simTimer=setInterval(()=>{const t=(Date.now()-simStart)/1000;S.channels.forEach(ch=>{S.vals[ch.id]=sampleWave(ch,t);});if(S.tab==='dashboard')renderTab();},Math.round(1000/S.sim.hz));}
+function stopSim(){if(S._simTimer){clearInterval(S._simTimer);S._simTimer=null;}S.sim.running=false;if(S.tab==='dashboard')renderTab();}
+
+// ── Lua Transpiler ────────────────────────────────────────────────────────────
+function luaToJS(src){
+  let js=src;
+  js=js.replace(/--([^\n]*)/g,'//$1');
+  js=js.replace(/~=/g,'!==');
+  js=js.replace(/\band\b/g,'&&');
+  js=js.replace(/\bor\b/g,'||');
+  js=js.replace(/\bnot\s+/g,'!');
+  js=js.replace(/(?<!\.)\.\.(?!\.)/g,'+');
+  js=js.replace(/\bnil\b/g,'null');
+  js=js.replace(/\blocal\b\s*/g,'let ');
+  js=js.replace(/\bfor\s+(\w+)\s*=\s*([^,\n]+),\s*([^,\n]+),\s*([^\n]+?)\s+do\b/g,(_,v,s,e,st)=>`for(let ${v}=${s.trim()};${v}<=${e.trim()};${v}+=${st.trim()}){`);
+  js=js.replace(/\bfor\s+(\w+)\s*=\s*([^,\n]+),\s*([^\n]+?)\s+do\b/g,(_,v,s,e)=>`for(let ${v}=${s.trim()};${v}<=${e.trim()};${v}++){`);
+  js=js.replace(/\bfor\s+(\w+)\s*,\s*(\w+)\s+in\s+(?:pairs|ipairs)\s*\(([^)]+)\)\s+do\b/g,(_,k,v,t)=>`for(let [${k},${v}] of Object.entries(${t})){`);
+  js=js.replace(/\bwhile\s+(.+?)\s+do\b/gm,(_,c)=>`while(${c}){`);
+  js=js.replace(/\belseif\s+(.+?)\s+then\b/gm,(_,c)=>`}else if(${c}){`);
+  js=js.replace(/\bif\s+(.+?)\s+then\b/gm,(_,c)=>`if(${c}){`);
+  js=js.replace(/\belse\b(?!\s*if|\s*{)/g,'}else{');
+  js=js.replace(/\bfunction\s+(\w+(?:\.\w+)*)\s*\(([^)]*)\)/gm,'function $1($2){');
+  js=js.replace(/\bfunction\s*\(([^)]*)\)/gm,'function($1){');
+  js=js.replace(/^\s*end\b\s*$/gm,'}');
+  js=js.replace(/\bmath\.(abs|sin|cos|tan|sqrt|floor|ceil|max|min|exp|log|random|pi)\b/g,(_,f)=>`Math.${f}`);
+  js=js.replace(/\bstring\.format\b/g,'_sfmt');
+  js=js.replace(/\bstring\.len\b/g,'_slen');
+  js=js.replace(/\bstring\.upper\b/g,'_supr');
+  js=js.replace(/\bstring\.lower\b/g,'_slwr');
+  js=js.replace(/\bstring\.sub\b/g,'_ssub');
+  js=js.replace(/\btostring\s*\(/g,'String(');
+  js=js.replace(/\btonumber\s*\(/g,'Number(');
+  js=js.replace(/#(\w+)/g,'$1.length');
+  js=js.replace(/\btable\.insert\s*\((\w+),\s*([^)]+)\)/g,'$1.push($2)');
+  js=js.replace(/\bprint\s*\(/g,'println(');
+  return js;
+}
+function _sfmt(fmt,...args){let i=0;return String(fmt).replace(/%([.\d]*)([diouxXeEfgGsq%])/g,(m,spec,t)=>{if(t==='%')return '%';const v=args[i++];if(v===undefined)return m;switch(t){case 'd':case 'i':return Math.trunc(+v).toString();case 'f':{const dp=spec.includes('.')?parseInt(spec.split('.')[1]):6;return(+v).toFixed(dp);}case 's':return String(v);case 'x':return Math.trunc(+v).toString(16);case 'X':return Math.trunc(+v).toString(16).toUpperCase();default:return String(v);}});}
+const _slen=s=>String(s).length,_supr=s=>String(s).toUpperCase(),_slwr=s=>String(s).toLowerCase(),_ssub=(s,i,j)=>String(s).slice(i-1,j);
+
+function runLuaScript(){
+  const js=luaToJS(S.lua.script);
+  const env={};
+  const getChannel=n=>{const ch=S.channels.find(c=>c.name===n);return ch?(S.vals[ch.id]??ch.def):0;};
+  const setChannel=(n,v)=>{const ch=S.channels.find(c=>c.name===n);if(ch)S.vals[ch.id]=+v;};
+  const println=m=>{S.lua.console=[...S.lua.console.slice(-299),String(m)];if(S.tab==='lua')renderTab();};
+  const readCAN=_i=>({id:S.frame.id,extended:S.frame.extended,data:[...S.frame.data]});
+  const txCAN=(_i,_id,_ext,data)=>{if(Array.isArray(data)){S.frame.data=data.slice(0,8).map(v=>+v&255);while(S.frame.data.length<8)S.frame.data.push(0);}};
+  try{
+    const fn=new Function('getChannel','setChannel','println','readCAN','txCAN','Math','_sfmt','_slen','_supr','_slwr','_ssub',js+'\nif(typeof onTick==="function")env._onTick=onTick;');
+    fn(getChannel,setChannel,println,readCAN,txCAN,Math,_sfmt,_slen,_supr,_slwr,_ssub);
+    if(env._onTick){S.lua.running=true;S.lua.error=null;S._luaTimer=setInterval(()=>{try{env._onTick();}catch(e){S.lua.error=String(e);S.lua.console=[...S.lua.console.slice(-299),'[ERROR] '+e];stopLua();}},Math.round(1000/S.lua.tickHz));renderTab();}
+    else{println('[INFO] Script loaded. No onTick() function found — add one to run periodically.');S.lua.running=false;renderTab();}
+  }catch(e){S.lua.error='Error: '+e;S.lua.console=[...S.lua.console.slice(-299),'[ERROR] '+e];S.lua.running=false;renderTab();}
+}
+function stopLua(){if(S._luaTimer){clearInterval(S._luaTimer);S._luaTimer=null;}S.lua.running=false;renderTab();}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showModal(html){document.getElementById('modal-root').innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()">${html}</div>`;}
+function closeModal(){document.getElementById('modal-root').innerHTML='';}
+function scrollConsole(){const c=document.getElementById('console-out');if(c)c.scrollTop=c.scrollHeight;}
+
+// ── Guide / Learn ─────────────────────────────────────────────────────────────
+function showGuide(){
+  showModal(`<div class="modal" style="border-radius:16px 16px 0 0">
+    <h3>📖 CAN Bus Guide</h3>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:16px">Everything you need to understand this app</div>
+
+    <div class="guide-section">
+      <h4>🚌 What is CAN bus?</h4>
+      <p>CAN (Controller Area Network) is a wiring system used in almost every modern vehicle. Instead of running a separate wire for every sensor, all devices share <strong>two wires</strong> (CAN-High and CAN-Low) and take turns sending messages.</p>
+      <p>Think of it like a walkie-talkie system in the car. Every device — ECU, dash, PDM, keypad — is on the same channel and can hear everyone else.</p>
+    </div>
+
+    <div class="guide-section">
+      <h4>📨 What is a CAN Frame?</h4>
+      <p>Every message on CAN is called a <strong>frame</strong>. Each frame has:</p>
+      <div class="diagram">┌─────────────────────────────────────────┐
+│  CAN ID  │           8 Bytes of Data          │
+│  0x0CE0  │  27 10 04 B0 03 E8 03 44           │
+└─────────────────────────────────────────┘
+     ↑                    ↑
+ "Who sent it"      "The actual values"
+ (like a sender ID)  (up to 8 bytes = 64 bits)</div>
+      <p>The <strong>CAN ID</strong> tells you who sent the frame. For example, the MS3Pro ECU always uses 0x0CE0 for its first engine data frame. The 8 bytes of data contain all the values packed together.</p>
+    </div>
+
+    <div class="guide-section">
+      <h4>🔢 Bytes and Bits</h4>
+      <p>A <strong>bit</strong> is the smallest unit — it's either 0 or 1 (off or on).</p>
+      <p>A <strong>byte</strong> is 8 bits grouped together. One byte can hold values from 0 to 255.</p>
+      <div class="diagram">One byte (8 bits):
+  Bit 7  6  5  4  3  2  1  0
+    [1][0][0][1][1][1][0][0]  = 156 in decimal = 0x9C in hex
+
+A CAN frame has 8 bytes = 64 bits total.</div>
+      <p>In the <strong>Builder tab</strong>, you see the frame as a grid of 8 rows (bytes) × 8 columns (bits). Tap any bit to flip it.</p>
+    </div>
+
+    <div class="guide-section">
+      <h4>📡 What is a Signal?</h4>
+      <p>A <strong>signal</strong> is a real-world value (like RPM or temperature) that has been packed into specific bits of the frame. Multiple signals can share one frame.</p>
+      <div class="diagram">Frame 0x0CE0 — 8 bytes:
+  [  RPM (bits 0-15)  ][  TPS (bits 16-31)  ][ MAP ][ CLT ]
+   Byte 0    Byte 1      Byte 2    Byte 3     B4 B5  B6 B7</div>
+      <p>To read RPM: grab bits 0–15, multiply by the <strong>scale</strong> to get RPM. To read coolant temp: grab bits 48–63, multiply by scale and add <strong>offset</strong> (because temperatures can be negative).</p>
+    </div>
+
+    <div class="guide-section">
+      <h4>⚖️ Scale and Offset</h4>
+      <p>The raw bits give a whole number. <strong>Scale</strong> and <strong>offset</strong> convert it to real units:</p>
+      <div class="example">Physical value = (raw bits × scale) + offset
+
+Example — Coolant temp:
+  Raw bits = 845
+  Scale    = 0.1
+  Offset   = −40
+  Result   = (845 × 0.1) + (−40) = 84.5 − 40 = 44.5 °C
+
+Example — RPM (simpler):
+  Raw bits = 3200
+  Scale    = 1
+  Offset   = 0
+  Result   = 3200 RPM</div>
+      <div class="tip">Scale is usually a small number like 0.1 because the raw value is stored as a whole number but the real value has a decimal place.</div>
+    </div>
+
+    <div class="guide-section">
+      <h4>↔️ Byte Order (Intel vs Motorola)</h4>
+      <p>When a value spans multiple bytes, you need to know which byte comes first. There are two conventions:</p>
+      <div class="diagram">Value: 0x1234 (decimal 4660) stored in bytes 0 and 1:
+
+Intel (little-endian):  byte0 = 0x34  byte1 = 0x12
+  LSB (least significant) comes first
+
+Motorola (big-endian):  byte0 = 0x12  byte1 = 0x34
+  MSB (most significant) comes first</div>
+      <p><strong>Intel</strong> is common in European systems (CAN databases from Vector tools). <strong>Motorola</strong> is common in older/American systems. The MS3Pro uses Motorola.</p>
+      <div class="tip">If your decoded value looks completely wrong, try switching byte order — that's almost always the problem.</div>
+    </div>
+
+    <div class="guide-section">
+      <h4>📋 Channel Map Tab</h4>
+      <p>This is your list of <strong>named data channels</strong> — like RPM, Speed, Temperature. Each one can be displayed on the Dashboard and read/written by Lua scripts.</p>
+      <p>Load a <strong>device preset</strong> to instantly get all the channels for your device (MS3Pro, PDM32, etc.) pre-configured.</p>
+    </div>
+
+    <div class="guide-section">
+      <h4>🔧 Builder Tab</h4>
+      <p>The Builder lets you manually construct a CAN frame and see how signals are packed inside it. Use it to:</p>
+      <ul style="font-size:13px;color:#c0c8e0;line-height:1.9;padding-left:18px">
+        <li>Verify you've got the right scale/offset for a signal</li>
+        <li>Test what value a specific hex sequence decodes to</li>
+        <li>Learn visually how bits are used</li>
+      </ul>
+    </div>
+
+    <div class="guide-section">
+      <h4>💻 Lua Tab</h4>
+      <p>Write a script that runs repeatedly (like a small program). On RaceCapture hardware this controls the device — here it runs in simulation mode so you can test logic.</p>
+      <p>The <code>onTick()</code> function is called at your chosen rate (default 10 times per second). Use <code>getChannel("RPM")</code> to read, <code>setChannel("Name", value)</code> to write, and <code>println("text")</code> to log.</p>
+    </div>
+
+    <div class="guide-section">
+      <h4>📊 Dashboard Tab</h4>
+      <p>Shows live animated gauges for all your channels. Hit <strong>Start Sim</strong> to generate fake sensor data so you can see everything moving without real hardware.</p>
+      <p>Each waveform shape means: <strong>Sine</strong> = smooth up/down wave · <strong>Ramp</strong> = rises then resets · <strong>Step</strong> = flips between min and max · <strong>Constant</strong> = fixed value · <strong>Random Walk</strong> = wanders randomly.</p>
+    </div>
+
+    <div style="text-align:center;margin-top:20px">
+      <button class="btn bp" onclick="closeModal()" style="min-width:160px">Got it — let's go!</button>
+    </div>
+  </div>`);
+}
+
+// ── Concept help popups ───────────────────────────────────────────────────────
+const CONCEPTS={
+  'start-bit':'<h3>Start Bit</h3><p>Which bit position in the 64-bit frame your signal begins at. Bit 0 is the LSB of byte 0. Bit 63 is the MSB of byte 7.</p><div class="diagram">Byte: 0        1        2 ...\nBits: 0-7    8-15   16-23 ...\n\nIf Start Bit = 8, your signal begins at the first bit of byte 1.</div><p>For Motorola byte order, the start bit points to the <em>most significant</em> bit instead.</p>',
+  'bit-length':'<h3>Bit Length</h3><p>How many bits wide your signal is. More bits = wider range of values.</p><div class="diagram">8 bits  → 0 to 255 (unsigned)\n16 bits → 0 to 65,535\n16 bits signed → −32,768 to +32,767</div><p>RPM uses 16 bits because it needs to go up to ~65,000. A flag colour only needs 3 bits (0–7).</p>',
+  'byte-order':'<h3>Byte Order</h3><p><strong>Intel (little-endian):</strong> the least significant byte comes first. Common in European/Vector CAN databases.</p><p><strong>Motorola (big-endian):</strong> the most significant byte comes first. Common in older and US systems. MS3Pro uses this.</p><p>If your value decodes as complete nonsense, switching byte order usually fixes it.</p>',
+  'scale':'<h3>Scale (Multiplier)</h3><p>The raw bits give a whole number. Multiply by scale to get the real value.</p><div class="example">Raw = 1000, Scale = 0.1 → 100.0 kPa\nRaw = 845,  Scale = 0.1 → 84.5 → then add offset</div><p>Scale is usually 0.1, 0.01, or 0.25 because the ECU sends integer values but the real measurement has decimal places.</p>',
+  'offset':'<h3>Offset (Additive)</h3><p>Added after scaling. Used mainly for values that can be negative (like temperature).</p><div class="example">Raw = 250, Scale = 0.1, Offset = −40\n→ (250 × 0.1) + (−40) = 25 − 40 = −15 °C</div><p>Without the offset, you could not represent negative temperatures using an unsigned raw value.</p>',
+  'signed':'<h3>Signed vs Unsigned</h3><p><strong>Unsigned:</strong> all positive. 8 bits = 0 to 255.</p><p><strong>Signed:</strong> can be negative. Uses two\'s complement. 8 bits signed = −128 to +127.</p><p>Use signed for values that go below zero: temperature, ignition advance, lateral G-force.</p>',
+  'waveform':'<h3>Simulation Waveform</h3><p>How the fake value changes over time during simulation:</p><ul style="padding-left:16px;font-size:13px;line-height:2"><li><strong>Sine</strong> — smooth wave between min and max</li><li><strong>Ramp</strong> — rises steadily, then resets to min</li><li><strong>Step</strong> — flips between min and max</li><li><strong>Constant</strong> — stays at the default value</li><li><strong>Random Walk</strong> — drifts randomly (realistic noise)</li></ul>',
+};
+function showConcept(key){const c=CONCEPTS[key];if(!c)return;showModal(`<div class="modal">${c}<div class="modal-actions"><button class="btn bp" onclick="closeModal()">OK</button></div></div>`);}
+function helpBtn(key,label){return `<button onclick="showConcept('${key}')" style="background:none;border:none;color:var(--bl);font-size:11px;cursor:pointer;padding:0 2px;text-decoration:underline dotted;font-weight:600">${label} ?</button>`;}
+
+// ── Render dispatcher ─────────────────────────────────────────────────────────
+function renderTab(){
+  const el=document.getElementById('content');
+  switch(S.tab){
+    case 'channels': el.innerHTML=renderChannels();break;
+    case 'builder':  el.innerHTML=renderBuilder(); break;
+    case 'lua':      el.innerHTML=renderLua();     setTimeout(scrollConsole,50);break;
+    case 'dashboard':el.innerHTML=renderDashboard();break;
+  }
+}
+
+// ── Channels ──────────────────────────────────────────────────────────────────
+function renderChannels(){
+  const waveLabel={sine:'Sine',ramp:'Ramp',step:'Step',constant:'Constant','random-walk':'Random Walk'};
+  const presetOpts=PRESETS.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+
+  const chHTML=S.channels.length===0?`<div class="empty">No channels yet.<br><br>
+      <strong>Start here →</strong> choose a device preset above<br>and tap <strong>Load Preset</strong>.
+    </div>`:S.channels.map((c,i)=>`
+    <div class="item-row">
+      <div class="row">
+        <div class="col">
+          <div class="item-name">${esc(c.name)} <span style="color:var(--dim);font-size:12px;font-weight:400">${esc(c.unit)}</span></div>
+          <div class="item-meta">Range: ${c.min} – ${c.max} &nbsp;·&nbsp; Default: ${c.def}<br>Simulation: ${waveLabel[c.wave]||c.wave}, period ${(c.period/1000).toFixed(1)}s</div>
+        </div>
+        <span class="badge b-bl" style="flex-shrink:0">${waveLabel[c.wave]||c.wave}</span>
+      </div>
+      <div class="item-actions">
+        <button class="icon-btn" onclick="editChannel(${i})"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit</button>
+        <button class="icon-btn del" onclick="removeChannel(${i})"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Delete</button>
+      </div>
+    </div>`).join('');
+
+  return `
+    <h2>Channel Map</h2>
+    <p class="page-sub">A channel is a named value — like RPM or temperature. Channels show up on the Dashboard and can be read/written by Lua scripts.</p>
+
+    <div class="explain">
+      <strong>Step 1:</strong> Load a device preset to get all channels pre-configured, <em>or</em> add channels manually.
+      A channel defines the <strong>name</strong>, <strong>unit</strong>, and simulation behaviour — not the raw CAN encoding (that's set up in the Builder tab).
+    </div>
+
+    <div class="card">
+      <div class="sec">Load Device Preset</div>
+      <div class="fld">
+        <label>Device</label>
+        <select id="preset-sel"><option value="">— choose a device —</option>${presetOpts}</select>
+        <div class="hint">This loads pre-built channels AND sets the active frame in the Builder tab.</div>
+      </div>
+      <div id="preset-desc" style="font-size:12px;color:var(--dim);margin-bottom:10px;min-height:18px"></div>
+      <button class="btn bp" style="width:100%" onclick="loadPreset()">Load Preset</button>
+    </div>
+
+    <div class="row" style="margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <span style="color:var(--dim);font-size:13px;flex:1">${S.channels.length} channel${S.channels.length!==1?'s':''} defined</span>
+      <button class="btn bo bs" onclick="exportChannels()">Export JSON</button>
+      <button class="btn bo bs" onclick="document.getElementById('imp-file').click()">Import JSON</button>
+      <input id="imp-file" type="file" accept=".json" style="display:none" onchange="importChannels(event)">
+    </div>
+
+    ${chHTML}
+    <button class="btn bp" style="width:100%;margin-top:6px" onclick="addChannel()">+ Add Channel Manually</button>
+    <script>
+      document.getElementById('preset-sel').addEventListener('change',function(){
+        const p=PRESETS.find(x=>x.id===this.value);
+        document.getElementById('preset-desc').textContent=p?p.desc:'';
+      });
+    <\/script>`;
+}
+
+// ── Builder ───────────────────────────────────────────────────────────────────
+function renderBuilder(){
+  const d=S.frame.data;
+  const bitColorMap=new Map();
+  S.frame.signals.forEach((sig,i)=>{const bits=getSignalBits(sig);bits.forEach(b=>bitColorMap.set(b,{color:SIG_COLORS[i%SIG_COLORS.length],name:sig.name}));});
+
+  let grid=`<div class="bit-grid"><div class="bhdr"></div>`;
+  for(let b=7;b>=0;b--) grid+=`<div class="bhdr">${b}</div>`;
+  for(let by=0;by<8;by++){
+    grid+=`<div class="brl">B${by}</div>`;
+    for(let bi=7;bi>=0;bi--){
+      const abs=by*8+bi,bv=(d[by]>>bi)&1,si=bitColorMap.get(abs);
+      const bg=si?(bv?si.color:si.color+'33'):(bv?'#4b8ef1':'var(--bg3)');
+      const tc=si&&bv?'#000':(bv?'#fff':'var(--dim)');
+      const bo=si?`border-color:${si.color}`:'';
+      grid+=`<div class="bc" style="background:${bg};color:${tc};${bo}" onclick="toggleBit(${abs})" title="${si?si.name+': ':''}byte ${by}, bit ${bi}">${bv}</div>`;
+    }
+  }
+  grid+=`</div>`;
+
+  const presetOpts=PRESETS.filter(p=>p.frame).map(p=>`<option value="${p.id}">[${p.name}] ${p.frame.label}</option>`).join('');
+
+  const sigsHTML=S.frame.signals.length===0
+    ?`<div style="color:var(--dim);font-size:13px;padding:8px 0">No signals added. Tap <strong>+ Add Signal</strong> to define what values are packed into this frame.</div>`
+    :S.frame.signals.map((sig,i)=>{
+      const decoded=decodeSignal(d,sig);
+      const dp=sig.scale<1?Math.ceil(-Math.log10(sig.scale)):1;
+      const color=SIG_COLORS[i%SIG_COLORS.length];
+      return `<div class="item-row">
+        <div class="row" style="align-items:flex-start">
+          <div class="col">
+            <div class="item-name" style="color:${color}">${esc(sig.name)}</div>
+            <div class="item-meta">
+              Start bit: ${sig.startBit} &nbsp;·&nbsp; Length: ${sig.bitLength} bits<br>
+              ${sig.byteOrder==='intel'?'Intel (little-endian)':'Motorola (big-endian)'} &nbsp;·&nbsp; ${sig.signed?'Signed':'Unsigned'}<br>
+              ×${sig.scale}${sig.offset?` + (${sig.offset})`:''} ${esc(sig.unit)}
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div class="sig-val" style="color:${color}">${decoded.toFixed(dp)}</div>
+            <div style="font-size:11px;color:var(--dim)">${esc(sig.unit)}</div>
+          </div>
+          <button class="icon-btn del" onclick="removeSignal(${i})" style="flex-shrink:0;align-self:center"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+      </div>`;
+    }).join('');
+
+  const luaTable=`local data = {${d.map(b=>'0x'+b.toString(16).padStart(2,'0').toUpperCase()).join(', ')}}`;
+
+  return `
+    <h2>Message Builder</h2>
+    <p class="page-sub">Build a CAN frame byte by byte. Add signals to see how values are decoded from the raw bits.</p>
+
+    <div class="explain">
+      <strong>A CAN frame = CAN ID + 8 bytes of data.</strong>
+      The 8 bytes are shown as a grid of 64 bits below — 8 rows (bytes B0–B7), 8 columns (bits 7–0).
+      <strong>Signals</strong> are values packed into specific bit ranges. The coloured cells show which bits belong to each signal.
+    </div>
+
+    <div class="fld">
+      <label>Load Preset Frame</label>
+      <select onchange="loadPresetFrame(this.value)"><option value="">— load a known device frame —</option>${presetOpts}</select>
+    </div>
+
+    <div class="g2">
+      <div class="fld">
+        <label>CAN ID (hex)</label>
+        <input class="hex-in" value="${S.frame.id.toString(16).toUpperCase()}" oninput="setFrameId(this.value)" maxlength="8" placeholder="0CE0" autocorrect="off" spellcheck="false">
+        <div class="hint">Who sent this frame. E.g. MS3Pro uses 0x0CE0.</div>
+      </div>
+      <div class="fld">
+        <label>Frame Type</label>
+        <select onchange="S.frame.extended=this.value==='ext';save()">
+          <option value="std" ${!S.frame.extended?'selected':''}>Standard (11-bit ID)</option>
+          <option value="ext" ${S.frame.extended?'selected':''}>Extended (29-bit ID)</option>
+        </select>
+        <div class="hint">Most devices use Standard. Extended allows more IDs.</div>
+      </div>
+    </div>
+
+    <div class="fld">
+      <label>Hex Data — 8 bytes (16 hex digits)</label>
+      <input class="hex-in" id="hex-in" value="${bytesToHex(d)}" oninput="setHex(this.value)" placeholder="00 00 00 00 00 00 00 00" autocomplete="off" autocorrect="off" spellcheck="false">
+      <div class="hint">Each pair of hex digits is one byte. E.g. "27 10" = 0x2710 = 10000 in decimal.</div>
+    </div>
+
+    <div class="sec">Bit Grid — tap any bit to flip it</div>
+    <div class="explain" style="margin-bottom:8px">
+      Each <strong>row</strong> = one byte (B0 at top = first byte). Each <strong>column</strong> = one bit (7 = most significant, 0 = least significant).
+      The hex value for each byte is shown on the right. <strong>Coloured bits</strong> are claimed by a signal — the colour matches the signal name below.
+    </div>
+    <div class="card" style="padding:10px;overflow-x:auto">${grid}</div>
+
+    <div class="sec">Signals — values packed into this frame</div>
+    ${sigsHTML}
+    <div class="row wrap" style="gap:8px;margin-top:8px">
+      <button class="btn bp bs" onclick="addSignal()">+ Add Signal</button>
+      <button class="btn bo bs" onclick="copyLua('${luaTable.replace(/'/g,"\\'")}')">Copy as Lua</button>
+    </div>`;
+}
+
+// ── Lua ───────────────────────────────────────────────────────────────────────
+function renderLua(){
+  const lines=S.lua.console.map(l=>`<div class="${l.startsWith('[ERROR]')?'ce':l.startsWith('[WARNING]')?'cw':'cl'}">${esc(l)}</div>`).join('');
+  return `
+    <h2>Lua Scripting</h2>
+    <p class="page-sub">Write a script that reads channels, does logic, and writes results. Runs repeatedly at your chosen rate.</p>
+
+    <div class="explain">
+      <strong>onTick()</strong> is called repeatedly (default 10× per second). Think of it as a loop body.<br><br>
+      <strong>Key functions:</strong><br>
+      <code>getChannel("RPM")</code> — read a channel value<br>
+      <code>setChannel("MyValue", 42)</code> — write a channel (shows on Dashboard)<br>
+      <code>println("text")</code> — print to the console below<br>
+      <code>readCAN(0)</code> — read the active Builder frame<br><br>
+      <strong>Note:</strong> Channel names must match exactly what's in the Channel Map tab.
+    </div>
+
+    <div class="fld">
+      <textarea class="lua-editor" id="lua-src" rows="13" spellcheck="false" autocorrect="off" autocapitalize="none" onchange="S.lua.script=this.value;save()">${esc(S.lua.script)}</textarea>
+    </div>
+
+    <div class="row wrap" style="gap:8px;margin-bottom:12px;align-items:flex-end">
+      ${S.lua.running
+        ?`<button class="btn br" onclick="stopLua()">&#9632;&nbsp; Stop</button>`
+        :`<button class="btn bg" onclick="clearAndRun()">&#9654;&nbsp; Run</button>`}
+      <button class="btn bo bs" onclick="S.lua.console=[];renderTab()">Clear Console</button>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <label style="display:inline;white-space:nowrap;font-size:13px">Ticks/sec:</label>
+        <input type="number" value="${S.lua.tickHz}" min="1" max="100" style="width:70px" onchange="S.lua.tickHz=+this.value;save()" ${S.lua.running?'disabled':''}>
+      </div>
+      ${S.lua.running?'<span class="badge b-gn">Running</span>':''}
+    </div>
+
+    <div class="sec">Console Output</div>
+    <div class="tip" style="margin-top:0">Green = println() output &nbsp;·&nbsp; Red = errors. Script runs in JS-compatibility mode offline — common Lua patterns work.</div>
+    <div class="console" id="console-out">${lines||'<div class="cl" style="color:var(--dim)">-- output appears here when you tap Run --</div>'}</div>`;
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+function gaugeColor(pct){return pct>90?'#e05959':pct>70?'#e8944a':pct>50?'#d4b840':'#4b8ef1';}
+function renderDashboard(){
+  const gauges=S.channels.map(ch=>{
+    const v=S.vals[ch.id]??ch.def,range=ch.max-ch.min;
+    const pct=range===0?0:Math.max(0,Math.min(100,((v-ch.min)/range)*100));
+    const color=gaugeColor(pct),dp=range<10?2:range<100?1:0;
+    return `<div class="gc">
+      <div class="gn" title="${esc(ch.name)}">${esc(ch.name)}</div>
+      <div class="gv" style="color:${color}">${v.toFixed(dp)}</div>
+      <div class="gu">${esc(ch.unit)||'&nbsp;'}</div>
+      <div class="gbar"><div class="gfill" style="width:${pct.toFixed(1)}%;background:${color}"></div></div>
+    </div>`;
+  }).join('');
+
+  const tableRows=S.channels.map(ch=>{
+    const v=S.vals[ch.id]??ch.def,range=ch.max-ch.min,dp=range<10?2:range<100?1:0;
+    return `<tr><td style="padding:5px 4px;font-weight:600;font-size:13px">${esc(ch.name)}</td><td style="padding:5px 4px;font-family:monospace;color:#4b8ef1;font-size:13px">${v.toFixed(dp)}</td><td style="padding:5px 4px;color:var(--dim);font-size:12px">${esc(ch.unit)}</td></tr>`;
+  }).join('');
+
+  return `
+    <h2>Live Dashboard</h2>
+    <p class="page-sub">See all channel values live. Start the simulation to generate realistic fake data — no real hardware needed.</p>
+
+    <div class="explain">
+      <strong>Simulation</strong> generates fake sensor values using the waveform you set for each channel.
+      Tap <strong>Start Sim</strong> then watch the gauges animate. This lets you test your CAN mappings and Lua scripts without a real car.
+    </div>
+
+    <div class="card">
+      <div class="row wrap" style="gap:10px;align-items:flex-end">
+        ${S.sim.running
+          ?`<button class="btn br" onclick="stopSim()">&#9632;&nbsp; Stop Simulation</button>`
+          :`<button class="btn bg" onclick="startSim()" ${S.channels.length===0?'disabled':''}>&#9654;&nbsp; Start Simulation</button>`}
+        <div style="display:flex;align-items:center;gap:6px">
+          <label style="display:inline;white-space:nowrap;font-size:13px">Update rate:</label>
+          <input type="number" value="${S.sim.hz}" min="1" max="60" style="width:70px" onchange="S.sim.hz=+this.value;save();if(S.sim.running){stopSim();startSim();}" ${S.sim.running?'disabled':''}>
+          <span style="font-size:12px;color:var(--dim)">Hz</span>
+        </div>
+        ${S.sim.running?'<span class="badge b-gn">Simulating</span>':''}
+      </div>
+      ${S.channels.length===0?`<div class="tip" style="margin-top:10px">Go to the <strong>Channels</strong> tab and load a device preset first.</div>`:''}
+    </div>
+
+    ${S.channels.length===0?'':`<div class="gauge-grid" style="margin-bottom:16px">${gauges}</div>
+    <div class="sec">All Values</div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="color:var(--dim);font-size:11px;font-weight:700;border-bottom:1px solid var(--bd)">
+        <th style="text-align:left;padding:4px">Channel</th>
+        <th style="text-align:left;padding:4px">Value</th>
+        <th style="text-align:left;padding:4px">Unit</th>
+      </tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table>`}`;
+}
+
+// ── Channel form ──────────────────────────────────────────────────────────────
+function channelFormHTML(c){
+  const waves=[['constant','Constant — stays at default value'],['sine','Sine wave — smooth oscillation'],['ramp','Ramp — rises then resets'],['step','Step — flips between min and max'],['random-walk','Random Walk — drifts realistically']];
+  return `
+    <div class="explain" style="margin-bottom:12px">A channel is a <strong>named data value</strong>. The name must match what your Lua script or CAN signal uses. Min/Max set the display range on the Dashboard.</div>
+    <div class="g2">
+      <div class="fld"><label>Channel Name</label><input id="cf-name" value="${esc(c?.name||'')}" placeholder="e.g. RPM, Coolant, Speed"><div class="hint">Must match your Lua getChannel() call exactly.</div></div>
+      <div class="fld"><label>Unit</label><input id="cf-unit" value="${esc(c?.unit||'')}" placeholder="RPM, °C, %, kPa, V"><div class="hint">Displayed on the Dashboard gauge.</div></div>
+    </div>
+    <div class="g3">
+      <div class="fld"><label>Min Value</label><input type="number" id="cf-min" value="${c?.min??0}" step="any"><div class="hint">Gauge bottom</div></div>
+      <div class="fld"><label>Max Value</label><input type="number" id="cf-max" value="${c?.max??100}" step="any"><div class="hint">Gauge top</div></div>
+      <div class="fld"><label>Default</label><input type="number" id="cf-def" value="${c?.def??0}" step="any"><div class="hint">Starting value</div></div>
+    </div>
+    <div class="fld"><label>Simulation Waveform ${helpBtn('waveform','what is this?')}</label>
+      <select id="cf-wave">${waves.map(([v,l])=>`<option value="${v}" ${(c?.wave||'constant')===v?'selected':''}>${l}</option>`).join('')}</select>
+    </div>
+    <div class="fld"><label>Waveform Period (ms)</label>
+      <input type="number" id="cf-period" value="${c?.period??5000}" min="100">
+      <div class="hint">How long one complete cycle takes. E.g. 4000 ms = 4 seconds per sine wave.</div>
+    </div>
+    <div class="fld"><label>Noise Amplitude</label>
+      <input type="number" id="cf-noise" value="${c?.noise??0}" step="any" min="0">
+      <div class="hint">Random ± jitter added to make values look realistic. 0 = perfectly smooth.</div>
+    </div>`;
+}
+function addChannel(){showModal(`<div class="modal"><h3>Add Channel</h3>${channelFormHTML(null)}<div class="modal-actions"><button class="btn bo" onclick="closeModal()">Cancel</button><button class="btn bp" onclick="saveNewChannel()">Add Channel</button></div></div>`);}
+function saveNewChannel(){const n=document.getElementById('cf-name').value.trim();if(!n){alert('Channel name is required');return;}S.channels.push({id:'ch-'+Date.now(),name:n,unit:document.getElementById('cf-unit').value,min:+document.getElementById('cf-min').value,max:+document.getElementById('cf-max').value,def:+document.getElementById('cf-def').value,wave:document.getElementById('cf-wave').value,period:+document.getElementById('cf-period').value,noise:+document.getElementById('cf-noise').value});save();closeModal();renderTab();}
+function editChannel(i){const c=S.channels[i];showModal(`<div class="modal"><h3>Edit Channel</h3>${channelFormHTML(c)}<div class="modal-actions"><button class="btn bo" onclick="closeModal()">Cancel</button><button class="btn bp" onclick="saveEditChannel(${i})">Save</button></div></div>`);}
+function saveEditChannel(i){const n=document.getElementById('cf-name').value.trim();if(!n){alert('Name required');return;}S.channels[i]={...S.channels[i],name:n,unit:document.getElementById('cf-unit').value,min:+document.getElementById('cf-min').value,max:+document.getElementById('cf-max').value,def:+document.getElementById('cf-def').value,wave:document.getElementById('cf-wave').value,period:+document.getElementById('cf-period').value,noise:+document.getElementById('cf-noise').value};save();closeModal();renderTab();}
+function removeChannel(i){if(confirm('Delete channel "'+S.channels[i].name+'"?')){S.channels.splice(i,1);save();renderTab();}}
+function loadPreset(){const id=document.getElementById('preset-sel').value;const p=PRESETS.find(x=>x.id===id);if(!p){alert('Please choose a device first');return;}if(S.channels.length&&!confirm('Replace all current channels with the '+p.name+' preset?'))return;S.channels=p.channels.map(c=>({...c}));if(p.frame)S.frame={...p.frame,data:[...p.frame.data],signals:p.frame.signals.map(s=>({...s}))};save();renderTab();}
+function exportChannels(){const a=document.createElement('a');a.href='data:application/json,'+encodeURIComponent(JSON.stringify(S.channels,null,2));a.download='can-channels.json';a.click();}
+function importChannels(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);d.forEach(c=>S.channels.push(c));save();renderTab();}catch(err){alert('Invalid JSON file');}};r.readAsText(f);e.target.value='';}
+
+// ── Builder actions ───────────────────────────────────────────────────────────
+function setHex(v){const b=hexToBytes(v);if(b.some((x,i)=>x!==S.frame.data[i])){S.frame.data=b;save();renderTab();}}
+function setFrameId(v){const n=parseInt(v,16);if(!isNaN(n)){S.frame.id=n;save();}}
+function toggleBit(abs){const by=Math.floor(abs/8),bi=abs%8;S.frame.data[by]^=(1<<bi);save();renderTab();}
+function loadPresetFrame(id){const p=PRESETS.find(x=>x.id===id);if(!p?.frame)return;S.frame={...p.frame,data:[...p.frame.data],signals:p.frame.signals.map(s=>({...s}))};save();renderTab();}
+function removeSignal(i){S.frame.signals.splice(i,1);save();renderTab();}
+function copyLua(txt){navigator.clipboard?.writeText(txt).then(()=>alert('Copied to clipboard!')).catch(()=>prompt('Copy this:',txt));}
+
+function signalFormHTML(){
+  return `
+    <div class="explain" style="margin-bottom:12px">A signal is a value packed into specific <strong>bits</strong> of this frame. Tell the app where to find it (start bit + length) and how to convert bits → real units (scale + offset).</div>
+    <div class="g2">
+      <div class="fld"><label>Signal Name</label><input id="sf-name" placeholder="RPM, Temperature…"><div class="hint">Descriptive label for this value.</div></div>
+      <div class="fld"><label>Unit</label><input id="sf-unit" placeholder="RPM, °C, %, kPa"><div class="hint">Physical unit of the decoded value.</div></div>
+    </div>
+    <div class="g2">
+      <div class="fld"><label>Start Bit ${helpBtn('start-bit','explain')}</label>
+        <input type="number" id="sf-start" value="0" min="0" max="63">
+        <div class="hint">Intel: position of LSB (0=B0bit0). Motorola: position of MSB.</div>
+      </div>
+      <div class="fld"><label>Bit Length ${helpBtn('bit-length','explain')}</label>
+        <input type="number" id="sf-len" value="8" min="1" max="64">
+        <div class="hint">8 bits = 0–255, 16 bits = 0–65535.</div>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="fld"><label>Byte Order ${helpBtn('byte-order','explain')}</label>
+        <select id="sf-order">
+          <option value="intel">Intel (little-endian) — European/Vector</option>
+          <option value="motorola">Motorola (big-endian) — US/older</option>
+        </select>
+      </div>
+      <div class="fld"><label>Signed ${helpBtn('signed','explain')}</label>
+        <select id="sf-signed"><option value="0">Unsigned (always positive)</option><option value="1">Signed (can be negative)</option></select>
+        <div class="hint">Use signed for temperature, advance angle, G-force.</div>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="fld"><label>Scale (multiplier) ${helpBtn('scale','explain')}</label>
+        <input type="number" id="sf-scale" value="1" step="any">
+        <div class="hint">Raw bits × scale = physical value. Often 0.1 or 0.01.</div>
+      </div>
+      <div class="fld"><label>Offset (added after) ${helpBtn('offset','explain')}</label>
+        <input type="number" id="sf-offset" value="0" step="any">
+        <div class="hint">Use negative offset for values that go below zero.</div>
+      </div>
+    </div>`;
+}
+function addSignal(){showModal(`<div class="modal"><h3>Add Signal</h3>${signalFormHTML()}<div class="modal-actions"><button class="btn bo" onclick="closeModal()">Cancel</button><button class="btn bp" onclick="saveNewSignal()">Add Signal</button></div></div>`);}
+function saveNewSignal(){const n=document.getElementById('sf-name').value.trim();if(!n){alert('Signal name is required');return;}S.frame.signals.push({id:'sig-'+Date.now(),name:n,unit:document.getElementById('sf-unit').value,startBit:+document.getElementById('sf-start').value,bitLength:+document.getElementById('sf-len').value,byteOrder:document.getElementById('sf-order').value,signed:document.getElementById('sf-signed').value==='1',scale:+document.getElementById('sf-scale').value||1,offset:+document.getElementById('sf-offset').value});save();closeModal();renderTab();}
+
+// ── Lua actions ───────────────────────────────────────────────────────────────
+function clearAndRun(){S.lua.console=[];const ta=document.getElementById('lua-src');if(ta){S.lua.script=ta.value;}save();runLuaScript();}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+const TAB_TITLES={channels:'Channel Map',builder:'Message Builder',lua:'Lua Scripting',dashboard:'Dashboard'};
+function switchTab(t){
+  if(S.tab==='lua'){const ta=document.getElementById('lua-src');if(ta){S.lua.script=ta.value;save();}}
+  S.tab=t;
+  document.querySelectorAll('.tb').forEach(b=>b.classList.toggle('on',b.id==='tb-'+t));
+  document.getElementById('hdr-title').textContent=TAB_TITLES[t]||'CAN Tester';
+  renderTab();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+load();
+renderTab();
+// Show guide on very first visit
+if(!localStorage.getItem('ct2-seen')){localStorage.setItem('ct2-seen','1');setTimeout(showGuide,300);}
+</script>
+</body>
+</html>
